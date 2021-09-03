@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-09-03T01:32:05+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">Java程序在虚拟机是怎么执行的？（汇编层面分析）</title><link href="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/" rel="alternate" type="text/html" title="Java程序在虚拟机是怎么执行的？（汇编层面分析）" /><published>2021-09-01T00:00:00+00:00</published><updated>2021-09-01T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/">&lt;p&gt;正在研究openjdk8源码，指令在汇编层面的解析执行，感受到了其间许多超级精妙的设计。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-09-03T01:39:59+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">Java程序在虚拟机是怎么执行的？（汇编层面分析）</title><link href="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/" rel="alternate" type="text/html" title="Java程序在虚拟机是怎么执行的？（汇编层面分析）" /><published>2021-09-01T00:00:00+00:00</published><updated>2021-09-01T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/">&lt;p&gt;正在研究openjdk8源码，指令在汇编层面的解析执行，感受到了其间许多超级精妙的设计。&lt;/p&gt;
 
 &lt;h1 id=&quot;java程序是如何执行的字节码层面&quot;&gt;Java程序是如何执行的(字节码层面)&lt;/h1&gt;
 
@@ -284,7 +284,7 @@ empty
 
 &lt;p&gt;method_entry例程会在宿主栈，即汇编的调用栈上，开辟一块区域，作为Java的栈帧。&lt;strong&gt;zerolocals&lt;/strong&gt; 为例，本地变量表在栈帧的底部（地址高位），操作数栈在栈帧的顶部（地址低位）。如下面左边的图：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/assets/images/jvm/stack_frame_simple.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://ykry35.github.io/blog.github.io/assets/images/jvm/stack_frame_simple.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;注意，这个是汇编调用的栈，Java的方法栈由对应的entry例程开辟，寄生在宿主栈中。这个栈是倒着的，新的方法从下面往上压栈。&lt;/p&gt;
 
