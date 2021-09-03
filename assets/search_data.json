@@ -5,7 +5,7 @@
   
     {
       "title"    : "页面没有找到",
-      "url"      : "https://ykry35.github.io/404.html",
+      "url"      : "https://ykry35.github.io/blog.github.io/404.html",
       "keywords" : "404"
     } ,
   
@@ -13,7 +13,7 @@
   
     {
       "title"    : "About",
-      "url"      : "https://ykry35.github.io/about/",
+      "url"      : "https://ykry35.github.io/blog.github.io/about/",
       "keywords" : "Chaoxin Zhou, 周朝信"
     } ,
   
@@ -21,7 +21,7 @@
   
     {
       "title"    : "归档",
-      "url"      : "https://ykry35.github.io/archives/",
+      "url"      : "https://ykry35.github.io/blog.github.io/archives/",
       "keywords" : "归档"
     } ,
   
@@ -29,7 +29,7 @@
   
     {
       "title"    : "Categories",
-      "url"      : "https://ykry35.github.io/categories/",
+      "url"      : "https://ykry35.github.io/blog.github.io/categories/",
       "keywords" : "分类"
     } ,
   
@@ -39,7 +39,7 @@
   
     {
       "title"    : "Links",
-      "url"      : "https://ykry35.github.io/links/",
+      "url"      : "https://ykry35.github.io/blog.github.io/links/",
       "keywords" : "友情链接"
     } ,
   
@@ -47,7 +47,7 @@
   
     {
       "title"    : "mindmap",
-      "url"      : "https://ykry35.github.io/mindmap-viewer/",
+      "url"      : "https://ykry35.github.io/blog.github.io/mindmap-viewer/",
       "keywords" : "mindmap"
     } ,
   
@@ -55,7 +55,7 @@
   
     {
       "title"    : "Open Source Projects",
-      "url"      : "https://ykry35.github.io/open-source/",
+      "url"      : "https://ykry35.github.io/blog.github.io/open-source/",
       "keywords" : "开源,open-source,GitHub,开源项目"
     } ,
   
@@ -65,7 +65,7 @@
   
     {
       "title"    : "Wiki",
-      "url"      : "https://ykry35.github.io/wiki/",
+      "url"      : "https://ykry35.github.io/blog.github.io/wiki/",
       "keywords" : "维基, Wiki"
     } ,
   
@@ -84,7 +84,7 @@
       "title"    : "RetransformClass对运行时类方法的影响，及底层机理",
       "category" : "jvm",
       
-      "url"      : "https://ykry35.github.io/2021/08/31/retransform_class_mechanism/",
+      "url"      : "https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/",
       "keywords" : "jvm, hotspot, java"
     } ,
   
@@ -92,7 +92,7 @@
       "title"    : "Java程序在虚拟机是怎么执行的？（汇编层面分析）",
       "category" : "jvm",
       
-      "url"      : "https://ykry35.github.io/2021/09/01/how_does_the_java_program_run/",
+      "url"      : "https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/",
       "keywords" : "jvm, hotspot, java"
     } ,
   
@@ -100,7 +100,7 @@
       "title"    : "bytecode instruction",
       "category" : "jvm",
       
-      "url"      : "https://ykry35.github.io/wiki/bytecode_instruction/",
+      "url"      : "https://ykry35.github.io/blog.github.io/wiki/bytecode_instruction/",
       "keywords" : "jvm, Java"
     } ,
   
@@ -108,7 +108,7 @@
       "title"    : "Wiki Template",
       "category" : "cate1",
       
-      "url"      : "https://ykry35.github.io/wiki/template/",
+      "url"      : "https://ykry35.github.io/blog.github.io/wiki/template/",
       "keywords" : "keyword1, keyword2"
     } 
   
