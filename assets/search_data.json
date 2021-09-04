@@ -97,14 +97,6 @@
     } ,
   
     {
-      "title"    : "jacoco启动改造成attach",
-      "category" : "jacoco",
-      
-      "url"      : "https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/",
-      "keywords" : "jvm, Java, jacoco"
-    } ,
-  
-    {
       "title"    : "bytecode instruction",
       "category" : "",
       
