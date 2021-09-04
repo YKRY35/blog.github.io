@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-09-04T05:36:28+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jacoco启动改造成attach</title><link href="https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/" rel="alternate" type="text/html" title="jacoco启动改造成attach" /><published>2021-09-03T00:00:00+00:00</published><updated>2021-09-03T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/">&lt;p&gt;关注以下几个点。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-09-04T11:11:59+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jacoco启动改造成attach</title><link href="https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/" rel="alternate" type="text/html" title="jacoco启动改造成attach" /><published>2021-09-03T00:00:00+00:00</published><updated>2021-09-03T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/">&lt;p&gt;关注以下几个点。&lt;/p&gt;
 
 &lt;h1 id=&quot;栈帧中的方法被改了会发生什么&quot;&gt;栈帧中的方法被改了会发生什么？&lt;/h1&gt;
 
@@ -388,7 +388,7 @@ empty
 
 &lt;p&gt;JVM启动时，打上参数 -XX:+PrintInterpreter, 可以打印每个例程的入口地址，并反编译地址上的指令，反编译成对应平台的汇编。iconst_1反编译后如下：&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&quot;language-ASM&quot;&gt;iconst_1  4 iconst_1  [0x00007fd7e102c4c0, 0x00007fd7e102c520]  96 bytes
+&lt;pre&gt;&lt;code class=&quot;language-x86asm&quot;&gt;iconst_1  4 iconst_1  [0x00007fd7e102c4c0, 0x00007fd7e102c520]  96 bytes
 
 Argument 0 is unknown.RIP: 0x7fd7e102c4c0 Code size: 0x00000060
   0x00007fd7e102c4c0: push    %rax
@@ -424,7 +424,7 @@ Argument 0 is unknown.RIP: 0x7fd7e102c4c0 Code size: 0x00000060
 
 &lt;p&gt;ineg 指令生成的汇编例程：&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&quot;language-ASM&quot;&gt;ineg  116 ineg  [0x00007fd7e10304c0, 0x00007fd7e10304e0]  32 bytes
+&lt;pre&gt;&lt;code class=&quot;language-x86asm&quot;&gt;ineg  116 ineg  [0x00007fd7e10304c0, 0x00007fd7e10304e0]  32 bytes
 
 Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
   0x00007fd7e10304c0: mov     (%rsp),%eax   # vtos 入口地址
