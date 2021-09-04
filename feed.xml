@@ -1,8 +1,26 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-09-03T01:39:59+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">Java程序在虚拟机是怎么执行的？（汇编层面分析）</title><link href="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/" rel="alternate" type="text/html" title="Java程序在虚拟机是怎么执行的？（汇编层面分析）" /><published>2021-09-01T00:00:00+00:00</published><updated>2021-09-01T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/">&lt;p&gt;正在研究openjdk8源码，指令在汇编层面的解析执行，感受到了其间许多超级精妙的设计。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-09-04T05:36:28+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jacoco启动改造成attach</title><link href="https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/" rel="alternate" type="text/html" title="jacoco启动改造成attach" /><published>2021-09-03T00:00:00+00:00</published><updated>2021-09-03T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/03/jacoco_attach/">&lt;p&gt;关注以下几个点。&lt;/p&gt;
+
+&lt;h1 id=&quot;栈帧中的方法被改了会发生什么&quot;&gt;栈帧中的方法被改了会发生什么？&lt;/h1&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/&quot;&gt;重定义字节码机制&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;哪些类不能被重定义&quot;&gt;哪些类不能被重定义？&lt;/h1&gt;
+
+&lt;p&gt;isModifiableClass 的官方注释：&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;* Primitive classes (for example, &amp;lt;code&amp;gt;java.lang.Integer.TYPE&amp;lt;/code&amp;gt;)
+* and array classes are never modifiable.
+
+*/
+boolean
+isModifiableClass(Class&amp;lt;?&amp;gt; theClass);
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Chaoxin Zhou</name></author><category term="jacoco" /><summary type="html">关注以下几个点。</summary></entry><entry><title type="html">Java程序在虚拟机是怎么执行的？（汇编层面分析）</title><link href="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/" rel="alternate" type="text/html" title="Java程序在虚拟机是怎么执行的？（汇编层面分析）" /><published>2021-09-01T00:00:00+00:00</published><updated>2021-09-01T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/">&lt;p&gt;正在研究openjdk8源码，着重研究字节码指令在汇编层面的解释执行，感受到了其间许多超级精妙的设计。&lt;/p&gt;
+
+&lt;h1 id=&quot;行文结构&quot;&gt;行文结构&lt;/h1&gt;
+&lt;p&gt;见 &lt;a href=&quot;#总结&quot;&gt;总结&lt;/a&gt;&lt;/p&gt;
 
 &lt;h1 id=&quot;java程序是如何执行的字节码层面&quot;&gt;Java程序是如何执行的(字节码层面)&lt;/h1&gt;
 
-&lt;p&gt;我们在做字节码相关的开发时，只需要大致了解，每个指令在JVM中是如何解释执行的，以及虚拟机对字节码的校验即可，不需要过底层的原理。&lt;/p&gt;
+&lt;p&gt;我们在做字节码相关的开发时，只需要大致了解，每个字节码指令在JVM中是如何解释执行的，以及虚拟机对字节码的校验即可，不需要过底层的原理。&lt;/p&gt;
 
 &lt;p&gt;最常见的，需要关注这几个： 本地变量表(local variables), 操作数栈(operand stack)，静态常量池(constant pool)。&lt;/p&gt;
 
@@ -42,13 +60,13 @@ Code:
 
 &lt;p&gt;这个是javap -v -l -p A.class生成的，将下标引用转为了符号引用。&lt;/p&gt;
 
-&lt;p&gt;可以看到，本地变量表（以slot为单位，double，long占两个slot，其余均占1个slot）： slot0 是 this，slot1 就是如参int a，slot2是int w.&lt;/p&gt;
+&lt;p&gt;可以看到，本地变量表（以slot为单位，double，long占两个slot，其余均占1个slot）： slot0 是方法隐藏入参 this，slot1 是方法入参int a，slot2是int w.&lt;/p&gt;
 
 &lt;p&gt;本地变量表locals=3，3个槽（注意，因为变量存在作用域，所以这个槽是可以复用的，所以Start和Length的意义正在于此）&lt;/p&gt;
 
 &lt;p&gt;操作数栈深度为stack=2，最大只能有2个operand在栈中。&lt;/p&gt;
 
-&lt;p&gt;之后，每个指令被顺序执行，每个指令执行完，操作数栈的情况，我写在下面的注释中了。&lt;/p&gt;
+&lt;p&gt;之后，每个字节码指令被虚拟机顺序解释执行，每个指令解释执行完，操作数栈的情况，我写在下面的注释中了。&lt;/p&gt;
 
 &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;              # stack: []   左边为栈底，右边为栈顶
 0: bipush 10  # 将10压入栈中。 stack: [ 10 ]
@@ -61,7 +79,7 @@ Code:
 8: ireturn    # 栈顶元素弹出，作为方法return值。 stack: [ ]
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;每个指令的操作描述，wiki传送门： &lt;a href=&quot;/wiki/bytecode_instruction/&quot;&gt;bytecode instruction&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;每个指令的操作描述，wiki传送门： &lt;a href=&quot;https://ykry35.github.io/blog.github.io/wiki/bytecode_instruction/&quot;&gt;bytecode instruction&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;至此，Java编译后的.class，在虚拟机中的解释方式，大致是清楚了，剩下别的指令，模式差不多。&lt;/p&gt;
 
@@ -100,38 +118,41 @@ Code:
 
 &lt;h4 id=&quot;何为例程&quot;&gt;何为例程&lt;/h4&gt;
 
-&lt;p&gt;这些硬编码在内存的指令，就像函数一样，只是省去了C++编译这一步，他们是通用的，比如特定指令的处理例程，java方法入口开辟栈帧例程等等。&lt;/p&gt;
+&lt;p&gt;这些硬编码在内存的指令，就像函数一样，只是省去了C++编译这一步，他们是通用的，比如特定字节码指令的处理例程，java方法入口开辟栈帧例程等等。&lt;/p&gt;
 
 &lt;p&gt;hotspot启动时，会生成例程时，他会为每个例程开辟一个可读可写可执行的内存区域（mac不支持，所以mac的jdk似乎是CppInterpreter，非TemplateInterpreter），在开辟的内存中硬编码了机器指令，然后将这块内存起始地址保存，作为例程入口。&lt;/p&gt;
 
 &lt;p&gt;（这也是为什么，一到了，指令执行，C++调试器就调试不了了。因为那些程序是运行时硬编码到内存的，没经过C++编译器。）&lt;/p&gt;
 
-&lt;p&gt;这么做的目的是，直接编译C++会产生一些无用机器指令，而硬编码可以减少这些不必要的指令，解释执行的性能会提高。（即时编译JIT则会分析整个方法字节码，进一步精简机器指令）。&lt;/p&gt;
+&lt;p&gt;这么做的目的是，直接编译C++会产生一些无用机器指令，而硬编码可以减少这些不必要指令的生成，解释执行的性能会提高。（即时编译JIT则会分析整个方法字节码，进一步精简机器指令）。&lt;/p&gt;
 
 &lt;h4 id=&quot;java方法是什么&quot;&gt;Java方法是什么？&lt;/h4&gt;
 
-&lt;p&gt;从上文可以看出，Java方法的核心，就是经过前端编译器编译后的字节码。Java方法的执行，其实就是由C++硬编码进内存的这些汇编例程的执行。&lt;/p&gt;
+&lt;p&gt;从上文可以看出，Java方法的核心，就是经过前端编译器javac编译后的字节码。Java方法的执行，其实就是由C++硬编码进内存的这些汇编例程的执行。&lt;/p&gt;
 
 &lt;p&gt;Java方法的本质，我的理解：&lt;/p&gt;
 
 &lt;ol&gt;
   &lt;li&gt;
-    &lt;p&gt;字节码的所有指令及操作数，按字节排列在内存。一些额外信息也在内存。&lt;/p&gt;
+    &lt;p&gt;可执行bin/java的启动，就是C++的运行，入口是int main()。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;Java方法被调用(invoke指令或者C++进入Java)时，用于开辟栈帧的method_entry例程被触发，开辟这个Java方法的调用栈空间(包含本地变量表和操作数栈，返回地址等信息）。并且程序计数器(r13寄存器)指向第一个字节码指令的地址。&lt;/p&gt;
+    &lt;p&gt;类加载，加载的字节码文件被解析为JVM内部数据结构。字节码的所有指令及操作数，排列在内存。一些额外信息也在内存。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;method_entry例程开辟栈帧空间完（这个栈帧是寄生在宿主栈的，和汇编调用共用相同的栈），r13寄存器赋值完，就跳到r13寄存器指向的指令的例程，即字节码指令解释执行例程。&lt;/p&gt;
+    &lt;p&gt;Java方法被调用(invoke指令或者C++进入Java)时，用于开辟栈帧的method_entry例程被触发，method_entry根据这个Java方法在JVM的内部表示 Method数据结构，来开辟这个Java方法的调用栈空间(包含本地变量表和操作数栈，返回地址等信息）。并且程序计数器(r13寄存器)指向第一个字节码指令的地址。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;method_entry例程开辟栈帧空间完（这个栈帧是寄生在宿主栈的，和汇编调用共用相同的栈），r13寄存器赋值完，就跳(jmp)到r13寄存器指向的字节码指令的处理例程，即字节码指令解释执行例程。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;每个字节码指令例程执行到最后，会更新r13寄存器（选择顺序执行或者如jmp指令跳转），指向下个要执行指令的地址，然后jmp到下一个指令对应的例程。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;当遇到invoke指令，即调用java方法或本地方法，先把r13寄存器保存在当前栈中，然后callq 触发相应的method_entry例程，开辟栈帧执行目标方法。&lt;/p&gt;
+    &lt;p&gt;当遇到invoke指令，即调用java方法或本地方法，先把r13寄存器保存在当前栈中（用于调用返回后恢复现场），然后callq 触发相应的method_entry例程，开辟栈帧执行目标方法（同第2条）。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;当遇到return指令(ireturn, return等)，把返回值（即操作数栈顶元素）保存到相应位置，然后拿到栈帧中保存的的return_address，删除栈帧，返回上一次callq的地址（即调用method_entry的地址）。&lt;/p&gt;
+    &lt;p&gt;当遇到return指令(ireturn, return等)，把返回值（即操作数栈顶元素）保存到相应位置，然后拿到栈帧中保存的的return_address，删除栈帧，返回上一次callq的地址。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;返回调用处，比如invoke指令的例程中，从栈帧中拿到r13寄存器指向的字节码地址，恢复现场，继续当前java字节码的执行。&lt;/p&gt;
@@ -187,6 +208,11 @@ Code:
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;p&gt;call_stub()返回了CallStub例程的地址，CallStub是在hotspot启动时创建的例程&lt;/p&gt;
+
+&lt;p&gt;参数 entry_point 就是这个method的method_entry例程的地址。&lt;/p&gt;
+
+&lt;p&gt;比如，运行main方法，method对应的就是这个Java的main方法在虚拟机中的表示。&lt;/p&gt;
+
 &lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;address&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;generate_call_stub&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;address&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;return_address&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
     &lt;span class=&quot;c1&quot;&gt;// 省去了很多，主要几件事：&lt;/span&gt;
     &lt;span class=&quot;c1&quot;&gt;//  1. 调用函数的规范，保存一些寄存器的值，结束时恢复现场 &lt;/span&gt;
@@ -204,7 +230,7 @@ Code:
     &lt;span class=&quot;c1&quot;&gt;// 收尾，还原寄存器相关的。还有别的Java返回类型处理。（还要细看。。）&lt;/span&gt;
   &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;__ call(c_rarg1); 是生成汇编指令的， 程序从这里开始 callq 到 Java方法对应的 method_entry例程，进入java的世界。(__是define的一个函数)&lt;/p&gt;
+&lt;p&gt;__ call(c_rarg1); 是生成汇编指令的， 实际执行时，程序从这里 callq 到 Java方法对应的 method_entry例程，进入java的世界。(__是define的一个函数)&lt;/p&gt;
 
 &lt;h2 id=&quot;重要的几个例程&quot;&gt;重要的几个例程&lt;/h2&gt;
 
@@ -300,7 +326,7 @@ empty
 
 &lt;h3 id=&quot;bytecode解释例程&quot;&gt;bytecode解释例程&lt;/h3&gt;
 
-&lt;p&gt;每一个指令会有一段处理例程，完成当前指令的操作。并将指令指针(r13寄存器)指向下一个需要执行指令的地址，然后跳转到下个指令的处理例程。&lt;/p&gt;
+&lt;p&gt;每一个字节码指令会有一段处理例程，完成当前指令的操作。并将字节码指令指针(r13寄存器)指向下一个需要解释执行字节码指令的地址，然后跳转到下个字节码指令的处理例程。&lt;/p&gt;
 
 &lt;p&gt;但实际实现，比这个稍稍复杂一点。每个字节码指令的需要完成的操作，不是完全都在当前指令的例程中的。有一部分会在下一个指令的例程中。这么设计，是为了寄存器传值优化，在解释执行时，可以减少内存的访问。下面介绍。&lt;/p&gt;
 
@@ -347,7 +373,7 @@ empty
 
 &lt;h4 id=&quot;dispatchtable&quot;&gt;DispatchTable&lt;/h4&gt;
 
-&lt;p&gt;栈顶状态，字节码指令 –&amp;gt; 指令解释例程地址&lt;/p&gt;
+&lt;p&gt;[栈顶状态，字节码指令] –&amp;gt; 指令解释例程地址&lt;/p&gt;
 
 &lt;p&gt;看看定义：&lt;/p&gt;
 
@@ -417,15 +443,19 @@ Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
 
 &lt;p&gt;正常未优化流程是， 1入操作数栈，下一条指令，再从栈顶弹出，拿到这个数值1。 通过这种栈顶缓存的设计，1 这个数就直接通过寄存器过去了，没有走内存，性能大大提升。&lt;/p&gt;
 
-&lt;p&gt;还是ineg指令例程，如果是vtos入口进来的，会发生什么呢？&lt;/p&gt;
+&lt;p&gt;(延伸一下，还是ineg指令例程，如果是vtos入口进来的，会发生什么呢？&lt;/p&gt;
 
-&lt;p&gt;比如，3条指令： iconst_0, iconst_1, pop, ineg.   其中，ineg上一条指令的结束状态是vtos，所以走vtos入口0x00007fd7e10304c0，mov (%rsp), %eax ， 把rsp指向的地址的值传入eax，即操作数栈栈顶元素拷贝到eax寄存器。 然后rsp寄存器内容加8，因为栈顶是地址低位，所以+8相当于是弹出栈顶元素了。然后紧接着执行 neg %eax取反。 所以vtos进来的，经过了内存，拿到了iconst_0压入的常量0，此处必须经过内存，就走从内存中取值。&lt;/p&gt;
+&lt;p&gt;比如，4条指令： iconst_0, iconst_1, pop, ineg.   其中，ineg上一条指令pop的结束状态是vtos，所以走vtos入口0x00007fd7e10304c0，mov (%rsp), %eax ， 把rsp指向的地址的值传入eax，即操作数栈栈顶元素拷贝到eax寄存器。 然后rsp寄存器内容加8，因为栈顶是地址低位，所以+8相当于是弹出栈顶元素了。然后紧接着执行 neg %eax取反。 所以vtos进来的，经过了内存，拿到了iconst_0压入的常量0，此处必须经过内存，就走从内存中取值。)&lt;/p&gt;
 
 &lt;h5 id=&quot;操作数栈传参&quot;&gt;操作数栈传参&lt;/h5&gt;
 
 &lt;p&gt;还是上面的iconst_1，如果下一条又遇到iconst_1 呢。那么第二个iconst_1的入口地址是 0x00007fd7e102c4ef。&lt;/p&gt;
 
 &lt;p&gt;会先push %rax， 把rax寄存器内容压栈，再执行后面的iconst_1。 由于iconst_1不依赖栈顶的数，所以上一条的iconst_1在这里才被压入栈中。&lt;/p&gt;
+
+&lt;p&gt;（  这里说明一下，栈帧创建后，操作数栈在栈帧的最下面（地址低位），rsp寄存器指向栈的最下面（栈顶），所以push指令压入的数就是在操作数栈中，所以压栈用的push指令。弹出栈元素，则将rsp+8即可（往地址高位移）。&lt;/p&gt;
+
+&lt;p&gt;所以，我理解操作数栈不像本地变量表，事先划好大小，操作数栈大小是不断变化的，因此当前方法栈帧的大小也会随解释执行而变化，调用下一个方法，下一个方法的栈帧起始位置也不确定。  ）&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;所以一个数是否压栈，会取决于后面的指令类型，如果当前指令要往栈顶放的数恰好下一条指令要用到，那么直接寄存器传过去，就不用入栈退栈的操作了。&lt;/strong&gt;&lt;/p&gt;
 
@@ -466,9 +496,9 @@ Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;bep, cep, …, dep 是8个地址。每个字节码解释例程会有多个入口地址，用来分情况处理上一指令剩余未完成的栈操作。&lt;/p&gt;
+&lt;p&gt;bep, cep, …, dep 是8个地址。每个字节码解释例程会有多个入口地址，用来分情况处理上一字节码指令例程剩余未完成的栈操作。&lt;/p&gt;
 
-&lt;p&gt;上一个指令执行完，会根据上一指令的out_tos，来选择下一个指令例程对应的state入口。&lt;/p&gt;
+&lt;p&gt;上一个字节码指令解释执行完，会根据上一字节码指令的out_tos，来选择下一个字节码指令例程对应的state入口。&lt;/p&gt;
 
 &lt;p&gt;像上面的iconst_1的 in_tos 是 vtos，即不依赖栈顶元素。他的例程入口生成器是这样的：&lt;/p&gt;
 
@@ -500,13 +530,15 @@ Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
 
 &lt;p&gt;可以看出，和反编译出来的汇编指令，结构是完全一致的。&lt;/p&gt;
 
-&lt;p&gt;我上面对指令解释例程不同state入口地址的分析，也是结合源码看出来的。&lt;/p&gt;
+&lt;p&gt;我上面对字节码指令解释例程不同state入口地址的分析，也是结合源码看出来的。&lt;/p&gt;
 
 &lt;h2 id=&quot;字节码数据存储在哪&quot;&gt;字节码数据存储在哪&lt;/h2&gt;
 
 &lt;h3 id=&quot;instanceklass结构&quot;&gt;InstanceKlass结构&lt;/h3&gt;
 
 &lt;p&gt;每一个Java的类，在JVM方法区，是一个Instancelass实例。&lt;/p&gt;
+
+&lt;p&gt;类加载时，会将.class转为JVM内部的数据结构。&lt;/p&gt;
 
 &lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;InstanceKlass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Klass&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
   &lt;span class=&quot;n&quot;&gt;Array&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Method&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&amp;gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_methods&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 保存所有方法定义&lt;/span&gt;
@@ -604,7 +636,15 @@ Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
 
 &lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
 
-&lt;p&gt;新世界的大门已然开启。&lt;/p&gt;</content><author><name>Chaoxin Zhou</name></author><category term="jvm" /><summary type="html">正在研究openjdk8源码，指令在汇编层面的解析执行，感受到了其间许多超级精妙的设计。</summary></entry><entry><title type="html">RetransformClass对运行时类方法的影响，及底层机理</title><link href="https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/" rel="alternate" type="text/html" title="RetransformClass对运行时类方法的影响，及底层机理" /><published>2021-08-31T00:00:00+00:00</published><updated>2021-08-31T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/">&lt;p&gt;RetransformClass 可以在运行时修改类的方法，如果一个方法正在运行，比如while(true)，这个时候，我修改这个方法，在里面加一些指令，那么对原来运行中的方法会产生什么影响呢？以及他背后的原理是什么呢？&lt;/p&gt;
+&lt;p&gt;开始，先观察学习Java程序编译产物 .class文件结构，将JVM当黑盒来理解内部解释字节码指令的机理。&lt;/p&gt;
+
+&lt;p&gt;而后，打开hotspot源码，寻找解释每个字节码指令的程序段，以及分析 包含本地变量表和操作数栈 的 栈帧 基本结构，分析 创建栈帧并jmp到第一个字节码指令例程的 method_entry 例程。&lt;/p&gt;
+
+&lt;p&gt;然后是，分析了下这几个例程的创建代码 以及 字节码在虚拟机中存储在哪。&lt;/p&gt;
+
+&lt;p&gt;最后，&lt;/p&gt;
+
+&lt;p&gt;新世界的大门已然开启。&lt;/p&gt;</content><author><name>Chaoxin Zhou</name></author><category term="jvm" /><summary type="html">正在研究openjdk8源码，着重研究字节码指令在汇编层面的解释执行，感受到了其间许多超级精妙的设计。</summary></entry><entry><title type="html">RetransformClass对运行时类方法的影响，及底层机理</title><link href="https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/" rel="alternate" type="text/html" title="RetransformClass对运行时类方法的影响，及底层机理" /><published>2021-08-31T00:00:00+00:00</published><updated>2021-08-31T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/">&lt;p&gt;RetransformClass 可以在运行时修改类的方法，如果一个方法正在运行，比如while(true)，这个时候，我修改这个方法，在里面加一些指令，那么对原来运行中的方法会产生什么影响呢？以及他背后的原理是什么呢？&lt;/p&gt;
 
 &lt;h1 id=&quot;先下结论&quot;&gt;先下结论&lt;/h1&gt;
 
