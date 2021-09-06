@@ -38,6 +38,14 @@
   
   
     {
+      "title"    : "jacoco启动改造成attach",
+      "url"      : "https://ykry35.github.io/blog.github.io/hidden/jacoco_attach/",
+      "keywords" : "jvm, Java, jacoco"
+    } ,
+  
+  
+  
+    {
       "title"    : "Links",
       "url"      : "https://ykry35.github.io/blog.github.io/links/",
       "keywords" : "友情链接"
@@ -82,18 +90,26 @@
   
     {
       "title"    : "RetransformClass对运行时类方法的影响，及底层机理",
-      "category" : "jvm",
+      "category" : "JVM",
       
       "url"      : "https://ykry35.github.io/blog.github.io/2021/08/31/retransform_class_mechanism/",
-      "keywords" : "jvm, hotspot, java"
+      "keywords" : "JVM, hotspot, Java"
     } ,
   
     {
       "title"    : "Java程序在虚拟机是怎么执行的？（汇编层面分析）",
-      "category" : "jvm",
+      "category" : "JVM",
       
       "url"      : "https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/",
-      "keywords" : "jvm, hotspot, java"
+      "keywords" : "JVM, hotspot, Java"
+    } ,
+  
+    {
+      "title"    : "JVM Specification",
+      "category" : "",
+      
+      "url"      : "https://ykry35.github.io/blog.github.io/wiki/JVM_Specification/",
+      "keywords" : ""
     } ,
   
     {
@@ -110,6 +126,14 @@
       
       "url"      : "https://ykry35.github.io/blog.github.io/wiki/template/",
       "keywords" : "keyword1, keyword2"
+    } ,
+  
+    {
+      "title"    : "",
+      "category" : "",
+      
+      "url"      : "https://ykry35.github.io/blog.github.io",
+      "keywords" : ""
     } 
   
 ]
