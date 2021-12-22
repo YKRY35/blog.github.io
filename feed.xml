@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-12-22T04:58:47+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jvm-sandbox原理</title><link href="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/" rel="alternate" type="text/html" title="jvm-sandbox原理" /><published>2021-12-20T00:00:00+00:00</published><updated>2021-12-20T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/">&lt;h1 id=&quot;操纵应用字节码的权利&quot;&gt;操纵应用字节码的权利&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-12-22T08:48:22+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jvm-sandbox原理</title><link href="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/" rel="alternate" type="text/html" title="jvm-sandbox原理" /><published>2021-12-20T00:00:00+00:00</published><updated>2021-12-20T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/">&lt;h1 id=&quot;操纵应用字节码的权利&quot;&gt;操纵应用字节码的权利&lt;/h1&gt;
 
 &lt;h2 id=&quot;jdk层的使用&quot;&gt;JDK层的使用&lt;/h2&gt;
 
@@ -149,7 +149,7 @@
 
 &lt;h3 id=&quot;类热更新&quot;&gt;类热更新&lt;/h3&gt;
 
-&lt;p&gt;。。。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://ykry35.github.io/blog.github.io/2021/09/01/how_does_the_java_program_run/&quot;&gt;GO&lt;/a&gt;&lt;/p&gt;
 
 &lt;h3 id=&quot;javaagent逻辑&quot;&gt;javaagent逻辑&lt;/h3&gt;
 
@@ -1801,7 +1801,7 @@ Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
     &lt;p&gt;方法中invoke指令，调用目标函数信息，是静态常量池的符号引用（字节码常量池的下标）。方法链接（link）即是将符号引用转成直接应用，缓存目标方法的内存地址在运行时常量池中，下次直接用即可，不需要再解析静态常量池。那既然缓存了，为什么新的调用还是能指向新的Method呢？&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;直接引用的缓存，保存在运行常量池中（ConstantPool）的ConstantPoolCache里。这个cache包括了多个ConstantPoolCacheEntry，地址信息都在这个entry里。当InstanceKlass的Method,ConstantPool全部被替换成了新的时，这些缓存信息也相当于都清空了。下次对这个方法的调用，是需要重新进行符号解析的。解析完，就能执行新的Method了，不受之前缓存影响，并且更新了当下的缓存。&lt;/p&gt;
+    &lt;p&gt;直接引用的缓存，保存在运行常量池中（ConstantPool）的ConstantPoolCache里。这个cache包括了多个ConstantPoolCacheEntry，地址信息都在这个entry里。重定义字节码，会扫描JVM内所有的类的ConstantPoolCache，把旧的Method地址缓存删除。&lt;/p&gt;
   &lt;/li&gt;
 &lt;/ol&gt;
 
@@ -1827,6 +1827,13 @@ Argument 0 is unknown.RIP: 0x7fd7e10304c0 Code size: 0x00000020
   &lt;span class=&quot;n&quot;&gt;the_class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_constants&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;scratch_class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;constants&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
   &lt;span class=&quot;n&quot;&gt;scratch_class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_constants&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;old_constants&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// See the previous comment.&lt;/span&gt;
   
+  &lt;span class=&quot;c1&quot;&gt;// ......&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;the_class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;oop_map_cache&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Flush references to any obsolete methods from the oop map cache&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// so that obsolete methods are not pinned.&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;the_class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;oop_map_cache&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flush_obsolete_entries&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// end redefine_single_class()&lt;/span&gt;
 
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Chaoxin Zhou</name></author><category term="JVM" /><summary type="html">RetransformClass 可以在运行时修改类的方法，如果一个方法正在运行，比如while(true)，这个时候，我修改这个方法，在里面加一些指令，那么对原来运行中的方法会产生什么影响呢？以及他背后的原理是什么呢？</summary></entry></feed>
