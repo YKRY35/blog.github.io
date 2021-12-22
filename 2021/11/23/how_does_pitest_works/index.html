@@ -1,0 +1,223 @@
+<!DOCTYPE html><html lang="zh-cmn-Hans" prefix="og: http://ogp.me/ns#" class="han-init"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /><title>变异测试框架Pitest原理 &mdash; Zhou</title><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/primer-css/css/primer.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/collection.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/repo-card.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/sections/repo-list.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/boxed-group.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/globals/common.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/globals/responsive.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/posts/index.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/octicons/octicons/octicons.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/code_theme/github.css"><link rel="canonical" href="https://ykry35.github.io/blog.github.io/2021/11/23/how_does_pitest_works/"><link rel="alternate" type="application/atom+xml" title="Zhou" href="https://ykry35.github.io/blog.github.io/feed.xml"><link rel="shortcut icon" href="https://ykry35.github.io/blog.github.io/favicon.ico"><meta property="og:title" content="变异测试框架Pitest原理"><meta name="keywords" content="Pitest"><meta name="og:keywords" content="Pitest"><meta name="description" content="背景"><meta name="og:description" content="背景"><meta property="og:url" content="https://ykry35.github.io/blog.github.io/2021/11/23/how_does_pitest_works/"><meta property="og:site_name" content="Zhou"><meta property="og:type" content="article"><meta property="og:locale" content="zh_CN" /><meta property="article:published_time" content="2021-11-23"> <script src="https://ykry35.github.io/blog.github.io/assets/vendor/jquery/dist/jquery.min.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/js/jquery-ui.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/js/main.js"></script></head><body class="" data-mz=""><header class="site-header"><div class="container"><h1><a href="https://ykry35.github.io/blog.github.io/" title="Zhou"><span class="octicon octicon-mark-github"></span> Zhou</a></h1><button class="collapsed mobile-visible" type="button" onclick="toggleMenu();"> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button><nav class="site-header-nav" role="navigation"> <a href="https://ykry35.github.io/blog.github.io/" class=" site-header-nav-item" target="" title="首页">首页</a> <a href="https://ykry35.github.io/blog.github.io/categories/" class=" site-header-nav-item" target="" title="分类">分类</a> <a href="https://ykry35.github.io/blog.github.io/wiki/" class=" site-header-nav-item" target="" title="维基">维基</a> <a href="https://ykry35.github.io/blog.github.io/links/" class=" site-header-nav-item" target="" title="链接">链接</a> <a href="https://ykry35.github.io/blog.github.io/about/" class=" site-header-nav-item" target="" title="关于">关于</a></nav></div></header><section class="collection-head small geopattern" data-pattern-id="变异测试框架Pitest原理"><div class="container"><div class="columns"><div class="column three-fourths"><div class="collection-title"><h1 class="collection-header">变异测试框架Pitest原理</h1><div class="collection-info"> <span class="meta-info"> <span class="octicon octicon-calendar"></span> 2021/11/23 </span> <span class="meta-info"> <span class="octicon octicon-file-directory"></span> <a href="https://ykry35.github.io/blog.github.io/categories/#测试工具" title="测试工具">测试工具</a> </span></div></div></div><div class="column one-fourth mobile-hidden"><div class="collection-title"></div></div></div></div></section><section class="container content"><div class="columns"><div class="column three-fourths" ><article class="article-content markdown-body"><h1 id="背景">背景</h1><p>目的： 检验断言的有效性、充分性。</p><p>举例说明。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">a</span><span class="o">(){</span>
+	<span class="kt">boolean</span> <span class="n">x</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+	<span class="k">return</span> <span class="n">x</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">aTest</span><span class="o">(){</span>
+	<span class="n">a</span><span class="o">();</span>
+	<span class="n">assertEquals</span><span class="o">(</span><span class="s">"1"</span><span class="o">,</span> <span class="s">"1"</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></div></div><p>这样一段程序，他的覆盖率是100%的。覆盖率无法验证断言是否有效，且无法判别是否有断言。</p><p>变异测试 <em>核心</em> 机理：原单测是通过的，某种方式改变源程序，如单测不通过，证明断言有效。</p><p>例如，返回值变异，上面的函数a()变异为</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">a</span><span class="o">(){</span>
+	<span class="kt">boolean</span> <span class="n">x</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+	<span class="k">return</span> <span class="o">!</span><span class="n">x</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div></div><p>这时，无效断言的aTest()仍然执行通过，可以认为aTest()没有对a()的返回进行有效断言。</p><p>如果做了有效断言，如下aTest2()。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">aTest2</span><span class="o">(){</span>
+	<span class="n">assertTrue</span><span class="o">(</span><span class="n">a</span><span class="o">());</span>
+<span class="o">}</span>
+</code></pre></div></div><p>对于aTest2()，变异以后，a()返回false，aTest2()不通过，所以a()的返回被有效断言，这个变异点通过变异测试。</p><h1 id="框架原理简述">框架原理简述</h1><p>那么，最简单的框架实现，就是：</p><div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+所有变异点 = 找到所有变异点()
+
+for 某个变异点X  in  所有变异点:
+	
+	执行X变异（注释：替换对应字节码）
+
+	执行所有单测
+
+	if 所有单测通过:
+		记录这个变异点不通过
+	else: (注释：存在单测不通过)
+		记录这个变异点通过
+
+	还原X变异（注释：还原对应字节码）
+
+分析变异点的通过情况()
+生成报告()
+
+</code></pre></div></div><p>但是，这其间，存在一个很大的优化点，就是对于每一个变异点，没必要全量去跑所有的单测。</p><p>只需要跑，覆盖到这个变异点的指令的单测即可。</p><p>所以，在这之前，需要收集覆盖率数据，记录每个指令被哪些单测覆盖，之后执行这个点的变异时，只需要执行覆盖它的单测即可。</p><p>所以，优化过的流程就是这样：</p><div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+所有变异点 = 找到所有变异点()
+
+收集覆盖率() // 注释：建立指令到覆盖它的单测们的映射
+
+for 某个变异点X  in  所有变异点:
+	
+	执行X变异// 注释：替换对应字节码
+
+	执行覆盖这个字节码指令的单测 // 注释：只要遇到失败的，就停止
+
+	if 所有单测通过:
+		记录这个变异点不通过
+	else: // 注释：存在单测不通过)
+		记录这个变异点通过
+
+	还原X变异 //注释：还原对应字节码
+
+分析变异点的通过情况()
+生成报告()
+
+</code></pre></div></div><h1 id="源码分析">源码分析</h1><h2 id="动态修改字节码">动态修改字节码</h2><p>由于收集覆盖率，和跑变异，都需要动态修改字节码，因此这里收集覆盖率和跑变异都是在子进程完成的。</p><p>通过启动Java子进程时，打上-javaagent参数，获得Instrumentation，来获得动态修改字节码的权限。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">WrappingProcess</span> <span class="o">{</span>
+
+  <span class="kd">private</span> <span class="nc">ProcessBuilder</span> <span class="nf">createProcessBuilder</span><span class="o">(</span><span class="nc">String</span> <span class="n">javaProc</span><span class="o">,</span>
+      <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">args</span><span class="o">,</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">mainClass</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">programArgs</span><span class="o">,</span>
+      <span class="nc">JavaAgent</span> <span class="n">javaAgent</span><span class="o">,</span> <span class="nc">String</span> <span class="n">classPath</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">cmd</span> <span class="o">=</span> <span class="n">createLaunchArgs</span><span class="o">(</span><span class="n">javaProc</span><span class="o">,</span> <span class="n">javaAgent</span><span class="o">,</span> <span class="n">args</span><span class="o">,</span> <span class="n">mainClass</span><span class="o">,</span>
+        <span class="n">programArgs</span><span class="o">,</span> <span class="n">classPath</span><span class="o">);</span>
+
+    <span class="c1">// IBM jdk adds this, thereby breaking everything</span>
+    <span class="n">removeClassPathProperties</span><span class="o">(</span><span class="n">cmd</span><span class="o">);</span>
+
+    <span class="k">return</span> <span class="k">new</span> <span class="nf">ProcessBuilder</span><span class="o">(</span><span class="n">cmd</span><span class="o">);</span>
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">createLaunchArgs</span><span class="o">(</span><span class="nc">String</span> <span class="n">javaProcess</span><span class="o">,</span>
+      <span class="nc">JavaAgent</span> <span class="n">agentJarLocator</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">args</span><span class="o">,</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">mainClass</span><span class="o">,</span>
+      <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">programArgs</span><span class="o">,</span> <span class="nc">String</span> <span class="n">classPath</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">cmd</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+    <span class="n">cmd</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">javaProcess</span><span class="o">);</span>
+
+    <span class="n">createClasspathJar</span><span class="o">(</span><span class="n">classPath</span><span class="o">,</span> <span class="n">cmd</span><span class="o">);</span>
+
+    <span class="n">cmd</span><span class="o">.</span><span class="na">addAll</span><span class="o">(</span><span class="n">args</span><span class="o">);</span>
+
+    <span class="n">addPITJavaAgent</span><span class="o">(</span><span class="n">agentJarLocator</span><span class="o">,</span> <span class="n">cmd</span><span class="o">);</span> <span class="c1">// 加上javaagent的jar包</span>
+    <span class="n">addLaunchJavaAgents</span><span class="o">(</span><span class="n">cmd</span><span class="o">);</span>
+
+    <span class="n">cmd</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">mainClass</span><span class="o">.</span><span class="na">getName</span><span class="o">());</span>
+    <span class="n">cmd</span><span class="o">.</span><span class="na">addAll</span><span class="o">(</span><span class="n">programArgs</span><span class="o">);</span>
+    <span class="k">return</span> <span class="n">cmd</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+</code></pre></div></div><p>主进程，会创建一个临时jar包，用作子进程javaagent的jar。</p><p>而HotSwapAgent.class 就在这个javaagent的临时jar包里。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HotSwapAgent</span> <span class="o">{</span>
+
+  <span class="kd">private</span> <span class="kd">static</span> <span class="nc">Instrumentation</span> <span class="n">instrumentation</span><span class="o">;</span> <span class="c1">// 用于后续动态替换字节码</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="kd">final</span> <span class="nc">String</span> <span class="n">agentArguments</span><span class="o">,</span> <span class="c1">// NO_UCD</span>
+      <span class="kd">final</span> <span class="nc">Instrumentation</span> <span class="n">inst</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Installing PIT agent"</span><span class="o">);</span>
+    <span class="n">instrumentation</span> <span class="o">=</span> <span class="n">inst</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">addTransformer</span><span class="o">(</span><span class="kd">final</span> <span class="nc">ClassFileTransformer</span> <span class="n">transformer</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">instrumentation</span><span class="o">.</span><span class="na">addTransformer</span><span class="o">(</span><span class="n">transformer</span><span class="o">);</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">hotSwap</span><span class="o">(</span><span class="kd">final</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">mutateMe</span><span class="o">,</span> <span class="kd">final</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">bytes</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// NO_UCD</span>
+
+    <span class="kd">final</span> <span class="nc">ClassDefinition</span><span class="o">[]</span> <span class="n">definitions</span> <span class="o">=</span> <span class="o">{</span> <span class="k">new</span> <span class="nc">ClassDefinition</span><span class="o">(</span><span class="n">mutateMe</span><span class="o">,</span> <span class="n">bytes</span><span class="o">)</span> <span class="o">};</span>
+
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="n">instrumentation</span><span class="o">.</span><span class="na">redefineClasses</span><span class="o">(</span><span class="n">definitions</span><span class="o">);</span>
+
+      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="kd">final</span> <span class="nc">ClassNotFoundException</span> <span class="o">|</span> <span class="nc">UnmodifiableClassException</span> <span class="o">|</span> <span class="nc">VerifyError</span> <span class="o">|</span> <span class="nc">InternalError</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// swallow</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+  <span class="o">}</span>
+
+<span class="o">}</span>
+</code></pre></div></div><p>覆盖率插探针，选择addTransformer来拦截修改正要加载的类。</p><p>变异阶段，选择redefineClasses来修改已经加载过的类。</p><h2 id="覆盖率收集">覆盖率收集</h2><h2 id="变异点扫描">变异点扫描</h2><h3 id="数据存储">数据存储</h3><p>GregorMutator.java</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">GregorMutater</span> <span class="kd">implements</span> <span class="nc">Mutater</span> <span class="o">{</span>
+
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">MutationDetails</span><span class="o">&gt;</span> <span class="nf">findMutations</span><span class="o">(</span>
+      <span class="kd">final</span> <span class="nc">ClassName</span> <span class="n">classToMutate</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="kd">final</span> <span class="nc">ClassContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassContext</span><span class="o">();</span>
+    <span class="n">context</span><span class="o">.</span><span class="na">setTargetMutation</span><span class="o">(</span><span class="nc">Optional</span><span class="o">.</span><span class="na">empty</span><span class="o">());</span>
+    <span class="nc">Optional</span><span class="o">&lt;</span><span class="kt">byte</span><span class="o">[]&gt;</span> <span class="n">bytes</span> <span class="o">=</span> <span class="nc">GregorMutater</span><span class="o">.</span><span class="na">this</span><span class="o">.</span><span class="na">byteSource</span><span class="o">.</span><span class="na">getBytes</span><span class="o">(</span>
+        <span class="n">classToMutate</span><span class="o">.</span><span class="na">asInternalName</span><span class="o">());</span>
+    
+    <span class="k">return</span> <span class="n">bytes</span><span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="n">findMutations</span><span class="o">(</span><span class="n">context</span><span class="o">))</span>
+        <span class="o">.</span><span class="na">orElse</span><span class="o">(</span><span class="nc">Collections</span><span class="o">.</span><span class="na">emptyList</span><span class="o">());</span>
+
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="kt">byte</span><span class="o">[],</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">MutationDetails</span><span class="o">&gt;&gt;</span> <span class="nf">findMutations</span><span class="o">(</span>
+      <span class="kd">final</span> <span class="nc">ClassContext</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">bytes</span> <span class="o">-&gt;</span> <span class="n">findMutationsForBytes</span><span class="o">(</span><span class="n">context</span><span class="o">,</span> <span class="n">bytes</span><span class="o">);</span>
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">MutationDetails</span><span class="o">&gt;</span> <span class="nf">findMutationsForBytes</span><span class="o">(</span>
+      <span class="kd">final</span> <span class="nc">ClassContext</span> <span class="n">context</span><span class="o">,</span> <span class="kd">final</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">classToMutate</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="kd">final</span> <span class="nc">ClassReader</span> <span class="n">first</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassReader</span><span class="o">(</span><span class="n">classToMutate</span><span class="o">);</span>
+    <span class="kd">final</span> <span class="nc">NullVisitor</span> <span class="n">nv</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">NullVisitor</span><span class="o">();</span>
+    <span class="kd">final</span> <span class="nc">MutatingClassVisitor</span> <span class="n">mca</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MutatingClassVisitor</span><span class="o">(</span><span class="n">nv</span><span class="o">,</span> <span class="n">context</span><span class="o">,</span>
+        <span class="n">filterMethods</span><span class="o">(),</span> <span class="k">this</span><span class="o">.</span><span class="na">mutators</span><span class="o">);</span>
+
+    <span class="n">first</span><span class="o">.</span><span class="na">accept</span><span class="o">(</span><span class="n">mca</span><span class="o">,</span> <span class="nc">ClassReader</span><span class="o">.</span><span class="na">EXPAND_FRAMES</span><span class="o">);</span>
+
+    <span class="k">return</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">context</span><span class="o">.</span><span class="na">getCollectedMutations</span><span class="o">());</span>
+  <span class="o">}</span>
+
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="nc">Mutant</span> <span class="nf">getMutation</span><span class="o">(</span><span class="kd">final</span> <span class="nc">MutationIdentifier</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="kd">final</span> <span class="nc">ClassContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassContext</span><span class="o">();</span>
+    <span class="n">context</span><span class="o">.</span><span class="na">setTargetMutation</span><span class="o">(</span><span class="nc">Optional</span><span class="o">.</span><span class="na">ofNullable</span><span class="o">(</span><span class="n">id</span><span class="o">));</span>
+
+    <span class="kd">final</span> <span class="nc">Optional</span><span class="o">&lt;</span><span class="kt">byte</span><span class="o">[]&gt;</span> <span class="n">bytes</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">byteSource</span><span class="o">.</span><span class="na">getBytes</span><span class="o">(</span><span class="n">id</span><span class="o">.</span><span class="na">getClassName</span><span class="o">()</span>
+        <span class="o">.</span><span class="na">asJavaName</span><span class="o">());</span>
+
+    <span class="kd">final</span> <span class="nc">ClassReader</span> <span class="n">reader</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassReader</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+    <span class="kd">final</span> <span class="nc">ClassWriter</span> <span class="n">w</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ComputeClassWriter</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">byteSource</span><span class="o">,</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">computeCache</span><span class="o">,</span> <span class="nc">FrameOptions</span><span class="o">.</span><span class="na">pickFlags</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="na">get</span><span class="o">()));</span>
+    <span class="kd">final</span> <span class="nc">MutatingClassVisitor</span> <span class="n">mca</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MutatingClassVisitor</span><span class="o">(</span><span class="n">w</span><span class="o">,</span> <span class="n">context</span><span class="o">,</span>
+        <span class="n">filterMethods</span><span class="o">(),</span> <span class="nc">FCollection</span><span class="o">.</span><span class="na">filter</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">mutators</span><span class="o">,</span>
+            <span class="n">isMutatorFor</span><span class="o">(</span><span class="n">id</span><span class="o">)));</span>
+    <span class="n">reader</span><span class="o">.</span><span class="na">accept</span><span class="o">(</span><span class="n">mca</span><span class="o">,</span> <span class="nc">ClassReader</span><span class="o">.</span><span class="na">EXPAND_FRAMES</span><span class="o">);</span>
+
+    <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">MutationDetails</span><span class="o">&gt;</span> <span class="n">details</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getMutationDetails</span><span class="o">(</span><span class="n">context</span>
+        <span class="o">.</span><span class="na">getTargetMutation</span><span class="o">().</span><span class="na">get</span><span class="o">());</span>
+
+    <span class="k">return</span> <span class="k">new</span> <span class="nf">Mutant</span><span class="o">(</span><span class="n">details</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span> <span class="n">w</span><span class="o">.</span><span class="na">toByteArray</span><span class="o">());</span>
+
+  <span class="o">}</span>
+
+<span class="o">}</span>
+
+</code></pre></div></div><p>findMutations用于在主进程中扫描所有变异点，getMutation用来执行变异，返回变异后的字节码。</p><p>注意ClassContext类，这个类相对于所有的MethodVisitor是同一个实例，因此所有方法注册的变异点都会进入到ClassContext中。</p><p>所以最后，context.getCollectedMutations()可以拿到所有变异点。</p><p>进入MutatingClassVisitor.java</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">MutatingClassVisitor</span> <span class="kd">extends</span> <span class="nc">ClassVisitor</span> <span class="o">{</span>
+
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="nc">MethodVisitor</span> <span class="nf">visitMethod</span><span class="o">(</span><span class="kd">final</span> <span class="kt">int</span> <span class="n">access</span><span class="o">,</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">methodName</span><span class="o">,</span>
+      <span class="kd">final</span> <span class="nc">String</span> <span class="n">methodDescriptor</span><span class="o">,</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">signature</span><span class="o">,</span>
+      <span class="kd">final</span> <span class="nc">String</span><span class="o">[]</span> <span class="n">exceptions</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="kd">final</span> <span class="nc">MethodMutationContext</span> <span class="n">methodContext</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MethodMutationContext</span><span class="o">(</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">context</span><span class="o">,</span> <span class="nc">Location</span><span class="o">.</span><span class="na">location</span><span class="o">(</span>
+            <span class="nc">ClassName</span><span class="o">.</span><span class="na">fromString</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">context</span><span class="o">.</span><span class="na">getClassInfo</span><span class="o">().</span><span class="na">getName</span><span class="o">()),</span>
+            <span class="nc">MethodName</span><span class="o">.</span><span class="na">fromString</span><span class="o">(</span><span class="n">methodName</span><span class="o">),</span> <span class="n">methodDescriptor</span><span class="o">));</span>
+
+    <span class="kd">final</span> <span class="nc">MethodVisitor</span> <span class="n">methodVisitor</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">cv</span><span class="o">.</span><span class="na">visitMethod</span><span class="o">(</span><span class="n">access</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span>
+        <span class="n">methodDescriptor</span><span class="o">,</span> <span class="n">signature</span><span class="o">,</span> <span class="n">exceptions</span><span class="o">);</span>
+
+    <span class="kd">final</span> <span class="nc">MethodInfo</span> <span class="n">info</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MethodInfo</span><span class="o">()</span>
+    <span class="o">.</span><span class="na">withOwner</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">context</span><span class="o">.</span><span class="na">getClassInfo</span><span class="o">()).</span><span class="na">withAccess</span><span class="o">(</span><span class="n">access</span><span class="o">)</span>
+    <span class="o">.</span><span class="na">withMethodName</span><span class="o">(</span><span class="n">methodName</span><span class="o">).</span><span class="na">withMethodDescriptor</span><span class="o">(</span><span class="n">methodDescriptor</span><span class="o">);</span>
+
+    <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">filter</span><span class="o">.</span><span class="na">test</span><span class="o">(</span><span class="n">info</span><span class="o">))</span> <span class="o">{</span> <span class="c1">// 当前方法需要查找变异点</span>
+      <span class="k">return</span> <span class="k">this</span><span class="o">.</span><span class="na">visitMethodForMutation</span><span class="o">(</span><span class="n">methodContext</span><span class="o">,</span> <span class="n">info</span><span class="o">,</span> <span class="n">methodVisitor</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">methodVisitor</span><span class="o">;</span>
+    <span class="o">}</span>
+
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="nc">MethodVisitor</span> <span class="nf">visitMethodForMutation</span><span class="o">(</span>
+      <span class="nc">MethodMutationContext</span> <span class="n">methodContext</span><span class="o">,</span> <span class="kd">final</span> <span class="nc">MethodInfo</span> <span class="n">methodInfo</span><span class="o">,</span>
+      <span class="kd">final</span> <span class="nc">MethodVisitor</span> <span class="n">methodVisitor</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="nc">MethodVisitor</span> <span class="n">next</span> <span class="o">=</span> <span class="n">methodVisitor</span><span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kd">final</span> <span class="nc">MethodMutatorFactory</span> <span class="n">each</span> <span class="o">:</span> <span class="k">this</span><span class="o">.</span><span class="na">methodMutators</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// 包上每个变异因子的MethodVisitor</span>
+      <span class="n">next</span> <span class="o">=</span> <span class="n">each</span><span class="o">.</span><span class="na">create</span><span class="o">(</span><span class="n">methodContext</span><span class="o">,</span> <span class="n">methodInfo</span><span class="o">,</span> <span class="n">next</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="k">return</span> <span class="nf">wrapWithDecorators</span><span class="o">(</span><span class="n">methodContext</span><span class="o">,</span> <span class="n">wrapWithFilters</span><span class="o">(</span><span class="n">methodContext</span><span class="o">,</span> <span class="n">next</span><span class="o">),</span> <span class="n">methodInfo</span><span class="o">);</span>
+  <span class="o">}</span>
+
+<span class="o">}</span>
+
+</code></pre></div></div><p>visitMethodForMutation中，each.create将每个变异因子的MethodVisitor给串起来了。这种串联会有问题吗？</p><p>不会有问题。</p><ol><li><p>因为findMutations中，不应该修改字节码指令。因此每个MethodVisitor拿到的指令是一模一样的，前面的visitor不会影响后面的visitor。</p></li><li><p>在getMutations中，一次只会执行一个变异，因此只有一个visitor会参与修改指令。它后面的visitor只会参与转发，不会匹配到变异点，也就不会参与指令修改。变异点的匹配后文介绍。</p></li></ol><h2 id="变异执行">变异执行</h2><div style="margin-top:2em;padding:0 1.5em;border:1px solid #d3d3d3;background-color:#deebf7"><h3>文档信息</h3><ul><li>本文作者：<a href="https://ykry35.github.io/blog.github.io" target="_blank">Chaoxin Zhou</a></li><li>本文链接：<a href="https://ykry35.github.io/blog.github.io/2021/11/23/how_does_pitest_works/" target="_blank">https://ykry35.github.io/blog.github.io/2021/11/23/how_does_pitest_works/</a></li><li>版权声明：自由转载-非商用-非衍生-保持署名（<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/deed.zh" target="_blank">创意共享3.0许可证</a>）</li></ul></div></article><div class="share"></div><div class="comment"><div id="gitalk-container"></div><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/gitalk/gitalk.css"> <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script> <script> var gitalk = new Gitalk({ id: '/2021/11/23/how_does_pitest_works/', clientID: 'a3a0fbaad3e91f2e2342', clientSecret: 'f82d523505992a3aab199b818ecff081b65f1a60', repo: 'blog.github.io', owner: 'ykry35', admin: ['ykry35'], labels: ['gitment'], perPage: 50, }); gitalk.render('gitalk-container'); </script></div></div><div class="column one-fourth"><h3>Search</h3><div id="site_search"> <input style="width:96%" type="text" id="search_box" placeholder="Search"></div><ul id="search_results" style="font-size:14px;list-style-type:none;padding-top:10px;padding-left:10px;"></ul><script src="https://ykry35.github.io/blog.github.io/assets/js/simple-jekyll-search.min.js"></script> <script type="text/javascript"> SimpleJekyllSearch({ searchInput: document.getElementById('search_box'), resultsContainer: document.getElementById('search_results'), json: 'https://ykry35.github.io/blog.github.io/assets/search_data.json?v=1640149055', searchResultTemplate: '<li><a href="{url}" title="{title}">{title}</a></li>', noResultsText: 'No results found', limit: 10, fuzzy: false, exclude: ['Welcome'] }) </script><h3 class="post-directory-title mobile-hidden">Table of Contents</h3><div id="post-directory-module" class="mobile-hidden"><section class="post-directory"><dl></dl></section></div><script src="https://ykry35.github.io/blog.github.io/assets/js/jquery.toc.js"></script></div></div></section><footer class="container"><div class="site-footer" role="contentinfo"><div class="copyright left mobile-block"> © 2021 <span title="Chaoxin Zhou">Chaoxin Zhou</span> <a href="javascript:window.scrollTo(0,0)" class="right mobile-visible">TOP</a></div><ul class="site-footer-links right mobile-hidden"><li> <a href="javascript:window.scrollTo(0,0)" >TOP</a></li></ul><a href="https://github.com/YKRY35/" target="_blank" aria-label="view source code"> <span class="mega-octicon octicon-mark-github" title="GitHub"></span> </a><ul class="site-footer-links mobile-hidden"><li> <a href="https://ykry35.github.io/blog.github.io/" title="首页" target="">首页</a></li><li> <a href="https://ykry35.github.io/blog.github.io/categories/" title="分类" target="">分类</a></li><li> <a href="https://ykry35.github.io/blog.github.io/wiki/" title="维基" target="">维基</a></li><li> <a href="https://ykry35.github.io/blog.github.io/links/" title="链接" target="">链接</a></li><li> <a href="https://ykry35.github.io/blog.github.io/about/" title="关于" target="">关于</a></li><li><a href="https://ykry35.github.io/blog.github.io/feed.xml"><span class="octicon octicon-rss" style="color:orange;"></span></a></li></ul></div></footer><div class="tools-wrapper"> <a class="gotop" href="#" title="回到顶部"><span class="octicon octicon-arrow-up"></span></a></div><script src="https://ykry35.github.io/blog.github.io/assets/js/geopattern.js"></script> <script> jQuery(document).ready(function($) { $('.geopattern').each(function(){ $(this).geopattern($(this).data('pattern-id')); }); /* hljs.initHighlightingOnLoad(); */ }); </script></body></html>

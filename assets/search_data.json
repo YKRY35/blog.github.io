@@ -105,6 +105,22 @@
     } ,
   
     {
+      "title"    : "变异测试框架Pitest原理",
+      "category" : "测试工具",
+      
+      "url"      : "https://ykry35.github.io/blog.github.io/2021/11/23/how_does_pitest_works/",
+      "keywords" : "Pitest"
+    } ,
+  
+    {
+      "title"    : "jvm-sandbox原理",
+      "category" : "JVM",
+      
+      "url"      : "https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/",
+      "keywords" : "sandbox, JVM"
+    } ,
+  
+    {
       "title"    : "JVM Specification",
       "category" : "",
       

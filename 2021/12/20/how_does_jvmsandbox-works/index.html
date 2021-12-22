@@ -1,0 +1,405 @@
+<!DOCTYPE html><html lang="zh-cmn-Hans" prefix="og: http://ogp.me/ns#" class="han-init"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /><title>jvm-sandbox原理 &mdash; Zhou</title><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/primer-css/css/primer.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/collection.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/repo-card.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/sections/repo-list.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/boxed-group.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/globals/common.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/globals/responsive.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/posts/index.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/octicons/octicons/octicons.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/code_theme/github.css"><link rel="canonical" href="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/"><link rel="alternate" type="application/atom+xml" title="Zhou" href="https://ykry35.github.io/blog.github.io/feed.xml"><link rel="shortcut icon" href="https://ykry35.github.io/blog.github.io/favicon.ico"><meta property="og:title" content="jvm-sandbox原理"><meta name="keywords" content="sandbox, JVM"><meta name="og:keywords" content="sandbox, JVM"><meta name="description" content="操纵应用字节码的权利"><meta name="og:description" content="操纵应用字节码的权利"><meta property="og:url" content="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/"><meta property="og:site_name" content="Zhou"><meta property="og:type" content="article"><meta property="og:locale" content="zh_CN" /><meta property="article:published_time" content="2021-12-20"> <script src="https://ykry35.github.io/blog.github.io/assets/vendor/jquery/dist/jquery.min.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/js/jquery-ui.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/js/main.js"></script></head><body class="" data-mz=""><header class="site-header"><div class="container"><h1><a href="https://ykry35.github.io/blog.github.io/" title="Zhou"><span class="octicon octicon-mark-github"></span> Zhou</a></h1><button class="collapsed mobile-visible" type="button" onclick="toggleMenu();"> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button><nav class="site-header-nav" role="navigation"> <a href="https://ykry35.github.io/blog.github.io/" class=" site-header-nav-item" target="" title="首页">首页</a> <a href="https://ykry35.github.io/blog.github.io/categories/" class=" site-header-nav-item" target="" title="分类">分类</a> <a href="https://ykry35.github.io/blog.github.io/wiki/" class=" site-header-nav-item" target="" title="维基">维基</a> <a href="https://ykry35.github.io/blog.github.io/links/" class=" site-header-nav-item" target="" title="链接">链接</a> <a href="https://ykry35.github.io/blog.github.io/about/" class=" site-header-nav-item" target="" title="关于">关于</a></nav></div></header><section class="collection-head small geopattern" data-pattern-id="jvm-sandbox原理"><div class="container"><div class="columns"><div class="column three-fourths"><div class="collection-title"><h1 class="collection-header">jvm-sandbox原理</h1><div class="collection-info"> <span class="meta-info"> <span class="octicon octicon-calendar"></span> 2021/12/20 </span> <span class="meta-info"> <span class="octicon octicon-file-directory"></span> <a href="https://ykry35.github.io/blog.github.io/categories/#JVM" title="JVM">JVM</a> </span></div></div></div><div class="column one-fourth mobile-hidden"><div class="collection-title"></div></div></div></div></section><section class="container content"><div class="columns"><div class="column three-fourths" ><article class="article-content markdown-body"><h1 id="操纵应用字节码的权利">操纵应用字节码的权利</h1><h2 id="jdk层的使用">JDK层的使用</h2><p>一般，获得sun.instrument.InstrumentationImpl（继承java.lang.instrument.Instrumentation），就能够获得很大的对字节码操纵的权利。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">Instrumentation</span> <span class="o">{</span>
+	<span class="c1">// 增加Transformer，在类加载或重定义时，触发ClassFileTransformer的transform，获得原字节码，提供修改后字节码</span>
+    <span class="kt">void</span> <span class="nf">addTransformer</span><span class="o">(</span><span class="nc">ClassFileTransformer</span> <span class="n">transformer</span><span class="o">);</span>
+    <span class="c1">// 移除Transformer</span>
+    <span class="kt">boolean</span> <span class="nf">removeTransformer</span><span class="o">(</span><span class="nc">ClassFileTransformer</span> <span class="n">transformer</span><span class="o">);</span>
+    <span class="c1">// 提供的类重新经过Transformer重定义</span>
+    <span class="kt">void</span> <span class="nf">retransformClasses</span><span class="o">(</span><span class="nc">Class</span><span class="o">&lt;?&gt;...</span> <span class="n">classes</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">UnmodifiableClassException</span><span class="o">;</span>
+    <span class="c1">// 重定义提供的类的字节码</span>
+    <span class="kt">void</span> <span class="nf">redefineClasses</span><span class="o">(</span><span class="nc">ClassDefinition</span><span class="o">...</span> <span class="n">definitions</span><span class="o">)</span>
+        <span class="kd">throws</span>  <span class="nc">ClassNotFoundException</span><span class="o">,</span> <span class="nc">UnmodifiableClassException</span><span class="o">;</span>
+    <span class="c1">// 指定类是否可重定义</span>
+    <span class="kt">boolean</span> <span class="nf">isModifiableClass</span><span class="o">(</span><span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">theClass</span><span class="o">);</span>
+    <span class="c1">// 所有已加载的类</span>
+	<span class="nc">Class</span><span class="o">[]</span> <span class="nf">getAllLoadedClasses</span><span class="o">();</span>
+	<span class="c1">// 增加jarfile到根加载器扫描路径</span>
+    <span class="kt">void</span> <span class="nf">appendToBootstrapClassLoaderSearch</span><span class="o">(</span><span class="nc">JarFile</span> <span class="n">jarfile</span><span class="o">);</span>
+    <span class="c1">// 增加jarfile到SystemClassLoader的扫描路径</span>
+    <span class="kt">void</span> <span class="nf">appendToSystemClassLoaderSearch</span><span class="o">(</span><span class="nc">JarFile</span> <span class="n">jarfile</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></div></div><p>两种方式在Java层拿到Instrumentation：javaagent方式，attach方式</p><h3 id="javaagent-方式">javaagent 方式</h3><p>在应用启动前，打上javaagent参数。</p><div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>java <span class="nt">-javagent</span>:/path/xxx.jar com.example.A
+</code></pre></div></div><p>那么，xxx.jar中指定类(META-INF配置中指定)的premain方法就会在主类A的main方法执行前执行，并提供Instrumentation。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">AgentClass</span><span class="o">{</span>
+	<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="nc">String</span> <span class="n">featureString</span><span class="o">,</span> <span class="nc">Instrumentation</span> <span class="n">inst</span><span class="o">)</span> <span class="o">{</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><h3 id="attach-方式">attach 方式</h3><p>应用照常启动。</p><div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>java com.example.A
+</code></pre></div></div><p>之后用别的进程侵入到目标应用进程。开一个新的Java进程，进程中：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">VirtualMachine</span> <span class="n">vmObj</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+<span class="k">try</span> <span class="o">{</span>
+    <span class="n">vmObj</span> <span class="o">=</span> <span class="nc">VirtualMachine</span><span class="o">.</span><span class="na">attach</span><span class="o">(</span><span class="n">targetJvmPid</span><span class="o">);</span> <span class="c1">// 目标进程号</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">vmObj</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">vmObj</span><span class="o">.</span><span class="na">loadAgent</span><span class="o">(</span><span class="s">"/path/xxx.jar"</span><span class="o">,</span> <span class="n">cfg</span><span class="o">);</span> <span class="c1">// xxx.jar粘到目标进程</span>
+    <span class="o">}</span>
+
+<span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="kc">null</span> <span class="o">!=</span> <span class="n">vmObj</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">vmObj</span><span class="o">.</span><span class="na">detach</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>loadAgent调用后，进程号为targetJvmPid的目标应用，会调用xxx.jar中指定类的attachmain方法，并提供Instrumentation。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">agentmain</span><span class="o">(</span><span class="nc">String</span> <span class="n">featureString</span><span class="o">,</span> <span class="nc">Instrumentation</span> <span class="n">inst</span><span class="o">)</span> <span class="o">{</span>
+<span class="o">}</span>
+</code></pre></div></div><h2 id="jvm的支持">JVM的支持</h2><p>下面以hotspot虚拟机为例。</p><p>JVM提供了一套native编程接口，JVMTI(JVM Tool Interface)，里面的一些接口和回调让我们能够影响、干预虚拟机的行为。</p><h3 id="类加载hook">类加载hook</h3><p>classfileParser.cpp</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">instanceKlassHandle</span> <span class="n">ClassFileParser</span><span class="o">::</span><span class="n">parseClassFile</span><span class="p">(</span><span class="n">Symbol</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span>
+                                                    <span class="n">ClassLoaderData</span><span class="o">*</span> <span class="n">loader_data</span><span class="p">,</span>
+                                                    <span class="n">Handle</span> <span class="n">protection_domain</span><span class="p">,</span>
+                                                    <span class="n">KlassHandle</span> <span class="n">host_klass</span><span class="p">,</span>
+                                                    <span class="n">GrowableArray</span><span class="o">&lt;</span><span class="n">Handle</span><span class="o">&gt;*</span> <span class="n">cp_patches</span><span class="p">,</span>
+                                                    <span class="n">TempNewSymbol</span><span class="o">&amp;</span> <span class="n">parsed_name</span><span class="p">,</span>
+                                                    <span class="kt">bool</span> <span class="n">verify</span><span class="p">,</span>
+                                                    <span class="n">TRAPS</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">JvmtiCachedClassFileData</span> <span class="o">*</span><span class="n">cached_class_file</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">Handle</span> <span class="n">class_loader</span><span class="p">(</span><span class="n">THREAD</span><span class="p">,</span> <span class="n">loader_data</span><span class="o">-&gt;</span><span class="n">class_loader</span><span class="p">());</span>
+  <span class="kt">bool</span> <span class="n">has_default_methods</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+  <span class="n">ResourceMark</span> <span class="n">rm</span><span class="p">(</span><span class="n">THREAD</span><span class="p">);</span>
+
+  <span class="n">ClassFileStream</span><span class="o">*</span> <span class="n">cfs</span> <span class="o">=</span> <span class="n">stream</span><span class="p">();</span>
+  <span class="c1">// Timing</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">THREAD</span><span class="o">-&gt;</span><span class="n">is_Java_thread</span><span class="p">(),</span> <span class="s">"must be a JavaThread"</span><span class="p">);</span>
+  <span class="n">JavaThread</span><span class="o">*</span> <span class="n">jt</span> <span class="o">=</span> <span class="p">(</span><span class="n">JavaThread</span><span class="o">*</span><span class="p">)</span> <span class="n">THREAD</span><span class="p">;</span>
+
+  <span class="n">init_parsed_class_attributes</span><span class="p">(</span><span class="n">loader_data</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">JvmtiExport</span><span class="o">::</span><span class="n">should_post_class_file_load_hook</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">JvmtiThreadState</span> <span class="o">*</span><span class="n">state</span> <span class="o">=</span> <span class="n">jt</span><span class="o">-&gt;</span><span class="n">jvmti_thread_state</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">KlassHandle</span> <span class="o">*</span><span class="n">h_class_being_redefined</span> <span class="o">=</span>
+                     <span class="n">state</span><span class="o">-&gt;</span><span class="n">get_class_being_redefined</span><span class="p">();</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">h_class_being_redefined</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">instanceKlassHandle</span> <span class="n">ikh_class_being_redefined</span> <span class="o">=</span>
+          <span class="n">instanceKlassHandle</span><span class="p">(</span><span class="n">THREAD</span><span class="p">,</span> <span class="p">(</span><span class="o">*</span><span class="n">h_class_being_redefined</span><span class="p">)());</span>
+        <span class="n">cached_class_file</span> <span class="o">=</span> <span class="n">ikh_class_being_redefined</span><span class="o">-&gt;</span><span class="n">get_cached_class_file</span><span class="p">();</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">ptr</span> <span class="o">=</span> <span class="n">cfs</span><span class="o">-&gt;</span><span class="n">buffer</span><span class="p">();</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">end_ptr</span> <span class="o">=</span> <span class="n">cfs</span><span class="o">-&gt;</span><span class="n">buffer</span><span class="p">()</span> <span class="o">+</span> <span class="n">cfs</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">();</span>
+
+    <span class="c1">// 提供给外部</span>
+    <span class="n">JvmtiExport</span><span class="o">::</span><span class="n">post_class_file_load_hook</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">class_loader</span><span class="p">(),</span> <span class="n">protection_domain</span><span class="p">,</span>
+                                           <span class="o">&amp;</span><span class="n">ptr</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">end_ptr</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">cached_class_file</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">ptr</span> <span class="o">!=</span> <span class="n">cfs</span><span class="o">-&gt;</span><span class="n">buffer</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">cfs</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ClassFileStream</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">end_ptr</span> <span class="o">-</span> <span class="n">ptr</span><span class="p">,</span> <span class="n">cfs</span><span class="o">-&gt;</span><span class="n">source</span><span class="p">());</span>
+      <span class="n">set_stream</span><span class="p">(</span><span class="n">cfs</span><span class="p">);</span> <span class="c1">// 更新成外部提供的流</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="c1">// ......</span>
+<span class="p">}</span>
+</code></pre></div></div><p>可以看到，JVM在解析class流的最开始，是有可能将原先的流通过JVMTI接口提供给外部的，如果返回新的字节码流，则将当前流替换成新的流来解析。</p><p>post_class_file_load_hook 后面的，以后再说。</p><p>反正这个调用，大多数情况下（因为Instrumentation只是基于JVMTI类增强的一种实现），最终会走到Java层，大家熟悉的transform方法：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">ClassFileTransformer</span><span class="o">{</span>
+	<span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">transform</span><span class="o">(</span><span class="kd">final</span> <span class="nc">ClassLoader</span> <span class="n">loader</span><span class="o">,</span>
+                            <span class="kd">final</span> <span class="nc">String</span> <span class="n">internalClassName</span><span class="o">,</span>
+                            <span class="kd">final</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">classBeingRedefined</span><span class="o">,</span>
+                            <span class="kd">final</span> <span class="nc">ProtectionDomain</span> <span class="n">protectionDomain</span><span class="o">,</span>
+                            <span class="kd">final</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">srcByteCodeArray</span><span class="o">)</span> <span class="o">{</span>
+    	<span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>在transform中，可以获得原先字节码，并返回处理后的字节码。</p><p>返回处理后的字节码之后，JVM的parseClassFile就会按新的字节码来解析这个类了。</p><h3 id="类热更新">类热更新</h3><p>。。。</p><h3 id="javaagent逻辑">javaagent逻辑</h3><p>。。。</p><h1 id="对原应用的干扰最少">对原应用的干扰最少</h1><h2 id="sandbox类隔离设计">sandbox类隔离设计</h2><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/jvm-sandbox-classloader.png" alt="" /></p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">SandboxClassLoader</span> <span class="kd">extends</span> <span class="nc">URLClassLoader</span> <span class="o">{</span>
+
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">toString</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">path</span><span class="o">;</span>
+
+    <span class="nc">SandboxClassLoader</span><span class="o">(</span><span class="kd">final</span> <span class="nc">String</span> <span class="n">namespace</span><span class="o">,</span>
+                       <span class="kd">final</span> <span class="nc">String</span> <span class="n">sandboxCoreJarFilePath</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">MalformedURLException</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">(</span><span class="k">new</span> <span class="no">URL</span><span class="o">[]{</span><span class="k">new</span> <span class="no">URL</span><span class="o">(</span><span class="s">"file:"</span> <span class="o">+</span> <span class="n">sandboxCoreJarFilePath</span><span class="o">)});</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">path</span> <span class="o">=</span> <span class="n">sandboxCoreJarFilePath</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">toString</span> <span class="o">=</span> <span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"SandboxClassLoader[namespace=%s;path=%s;]"</span><span class="o">,</span> <span class="n">namespace</span><span class="o">,</span> <span class="n">path</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">protected</span> <span class="kd">synchronized</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="nc">String</span> <span class="n">name</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">resolve</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">ClassNotFoundException</span> <span class="o">{</span>
+        <span class="kd">final</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadedClass</span> <span class="o">=</span> <span class="n">findLoadedClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">loadedClass</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="n">loadedClass</span><span class="o">;</span>
+        <span class="o">}</span>
+<span class="c1">//        // 优先从parent（SystemClassLoader）里加载系统类，避免抛出ClassNotFoundException</span>
+<span class="c1">//        if(name != null &amp;&amp; (name.startsWith("sun.") || name.startsWith("java."))) {</span>
+<span class="c1">//            return super.loadClass(name, resolve);</span>
+<span class="c1">//        }</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">aClass</span> <span class="o">=</span> <span class="n">findClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">resolve</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">resolveClass</span><span class="o">(</span><span class="n">aClass</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="n">aClass</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">resolve</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+</code></pre></div></div><p>可以看到SandboxClassLoader遇到需要load的类，他会优先自己去findClass,defineClass，优先由自己加载，不干扰它的父加载器。</p><p>当自己加载不到时，再去委派给父加载器去loadClass。</p><p>在AppClassLoader加载的类中，只要通过反射，就能够让对AppClassLoader的干扰只有SandboxClassLoader它一个。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="c1">// CoreServer类定义</span>
+<span class="c1">// CLASS_OF_PROXY_CORE_SERVER = "com.alibaba.jvm.sandbox.core.server.ProxyCoreServer";</span>
+<span class="kd">final</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">classOfProxyServer</span> <span class="o">=</span> <span class="n">sandboxClassLoader</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="no">CLASS_OF_PROXY_CORE_SERVER</span><span class="o">);</span>
+
+<span class="c1">// 获取CoreServer单例</span>
+<span class="kd">final</span> <span class="nc">Object</span> <span class="n">objectOfProxyServer</span> <span class="o">=</span> <span class="n">classOfProxyServer</span>
+        <span class="o">.</span><span class="na">getMethod</span><span class="o">(</span><span class="s">"getInstance"</span><span class="o">)</span>
+        <span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+
+<span class="c1">// CoreServer.isBind()</span>
+<span class="kd">final</span> <span class="kt">boolean</span> <span class="n">isBind</span> <span class="o">=</span> <span class="o">(</span><span class="nc">Boolean</span><span class="o">)</span> <span class="n">classOfProxyServer</span><span class="o">.</span><span class="na">getMethod</span><span class="o">(</span><span class="s">"isBind"</span><span class="o">).</span><span class="na">invoke</span><span class="o">(</span><span class="n">objectOfProxyServer</span><span class="o">);</span>
+</code></pre></div></div><p>当执行到ProxyCoreServer的方法后，由于其加载器是SandboxClassLoader，那么ProxyCoreServer用到的类都会由SandboxClassLoader优先加载了。</p><p>接下来讨论一下其间的细节。</p><h2 id="类隔离原理">类隔离原理</h2><h3 id="jvm何时触发类加载">JVM何时触发类加载</h3><p><strong>JVM规范，似乎没有规定要什么时候加载类，只规定了何时应当初始化类，因此类加载时机取决于虚拟机实现。</strong></p><p>下面以hotspot虚拟机为例(openjdk, oracle jdk)，介绍其类加载机制。</p><p>类是懒加载的。简单说，就是用到目标类时，发现目标类还未被当前加载器加载，则触发加载。</p><p>一般如下情况触发加载：</p><ol><li><p>加载类A时，类A的父类和接口会被加载</p></li><li><p>类被new时，或者静态方法调用(invokestatic)、字段被访问时(getstatic,putstatic) 会加载类</p></li><li><p>反射</p></li></ol><h4 id="举例">举例</h4><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AAA</span><span class="o">{</span>
+	<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">){</span>
+		<span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">Float</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="s">"1.0f"</span><span class="o">);</span> <span class="c1">// 断点1</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassLoader</span><span class="o">{</span>
+	<span class="kd">public</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="nc">String</span> <span class="n">name</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">ClassNotFoundException</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span> <span class="c1">// 断点2</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>先打断点1，然后启动应用，然后打断点2，继续执行。</p><p>会发现断点2处，name为 java/lang/Float，说明在执行main方法的第一句话时，Float这个类才被触发加载，在类AAA被加载时，Float类并不会被加载。</p><h4 id="jvm-类加载时机的原理">JVM 类加载时机的原理</h4><p>上面的类AAA，在被JVM加载链接初始化后，在内存里大致长这样。</p><p>Klass AAA是AAA类在内部的结构，里面包括方法（方法中给出了字节码指令），包括了常量池（最左列#是下标，省去了一部分，因此看着不连续;中间是类型，详见虚拟机规范；第三列是值，可能是常量池下标，可能是内存地址）。</p><p>SymbolTable是字符串常量池，对JVM来说是全局的。</p><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/when_trigger_loadclass_1.jpg" alt="" /></p><p>此时，main方法未被执行，可以看到常量池的#21，Class类型的槽(slot)指向的是Symbol*，指向字符串常量池的字符串，还是处于符号引用。</p><p>当main方法执行时，执行到invokestatic，发现方法描述在类常量池的#3个槽（<strong>实际情况是，存在ConstantPoolCache，这里涉及到类链接时的指令重写rewrite，字节码会被重写成cache表下标，但这里为了方便解释类加载问题，暂时先忽略指令重写</strong>），这时，知道了类描述是#21个槽，而方法描述是在#22个槽。</p><p>首先要先获取类，看了看#21个槽，发现这个指针指向的是字符串Symbol*，而非类的内部表示Klass*，意识到类尚未解析，触发resolve_class解析类。</p><p>而后，解析完这个类，内部结构应该变为这样：</p><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/when_trigger_loadclass_2.jpg" alt="" /></p><p>可以看到，#21槽，指向了内部的Float对应的Klass结构。完成了从符号引用到地址引用的转换。</p><p>之后，这个类再次用到java/lang/Float，由于常量池已经保存了解析后的类地址，因此不会再触发解析和加载。</p><p><strong>所以，这里例子中，是在invoke指令后，进行的类加载）</strong></p><p>PS. 有同学可能会问，C++中指针就一地址，我怎么快速区分它到底是 符号引用Symbol*还是地址引用Klass*。看了这constantPool.hpp这段就明白了：</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CPSlot</span> <span class="n">VALUE_OBJ_CLASS_SPEC</span> <span class="p">{</span>
+  <span class="kt">intptr_t</span> <span class="n">_ptr</span><span class="p">;</span>
+ <span class="nl">public:</span>
+  <span class="n">CPSlot</span><span class="p">(</span><span class="kt">intptr_t</span> <span class="n">ptr</span><span class="p">)</span><span class="o">:</span> <span class="n">_ptr</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{}</span>
+  <span class="n">CPSlot</span><span class="p">(</span><span class="n">Klass</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span><span class="o">:</span> <span class="n">_ptr</span><span class="p">((</span><span class="kt">intptr_t</span><span class="p">)</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{}</span>
+  <span class="n">CPSlot</span><span class="p">(</span><span class="n">Symbol</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span><span class="o">:</span> <span class="n">_ptr</span><span class="p">((</span><span class="kt">intptr_t</span><span class="p">)</span><span class="n">ptr</span> <span class="o">|</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{}</span>
+
+  <span class="kt">intptr_t</span> <span class="n">value</span><span class="p">()</span>   <span class="p">{</span> <span class="k">return</span> <span class="n">_ptr</span><span class="p">;</span> <span class="p">}</span>
+  <span class="kt">bool</span> <span class="n">is_resolved</span><span class="p">()</span>   <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="n">_ptr</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">;</span> <span class="p">}</span>
+  <span class="kt">bool</span> <span class="n">is_unresolved</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="n">_ptr</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
+
+  <span class="n">Symbol</span><span class="o">*</span> <span class="n">get_symbol</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">is_unresolved</span><span class="p">(),</span> <span class="s">"bad call"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">Symbol</span><span class="o">*</span><span class="p">)(</span><span class="n">_ptr</span> <span class="o">&amp;</span> <span class="o">~</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">Klass</span><span class="o">*</span> <span class="n">get_klass</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">is_resolved</span><span class="p">(),</span> <span class="s">"bad call"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">Klass</span><span class="o">*</span><span class="p">)</span><span class="n">_ptr</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div><p>Symbol*地址保存时，最低位被置为1了，取时再还原，用以区分。（8字节为单位去寻址，地址低3位必是000）</p><h3 id="jvm哪个加载器来加载">JVM哪个加载器来加载</h3><p>JVM在解析类时，发现类未加载，会使用当前类的类加载器去加载目标类。</p><p>例如，还是上面那个例子。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AAA</span><span class="o">{</span>
+	<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">){</span>
+		<span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">Float</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="s">"1.0f"</span><span class="o">);</span> 
+	<span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>打断点2的时候，会发现ClassLoader的this是AppClassLoader，而不是null (bootstrap classloader)。</p><p>因为，它用AAA的加载器AppClassLoader去尝试加载java/lang/Float了。</p><p>从constantPool.cpp(<strong>节选</strong>)源码中可以证明这一点：</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Klass</span><span class="o">*</span> <span class="n">ConstantPool</span><span class="o">::</span><span class="n">klass_at_impl</span><span class="p">(</span><span class="n">constantPoolHandle</span> <span class="n">this_oop</span><span class="p">,</span> <span class="kt">int</span> <span class="n">which</span><span class="p">,</span> <span class="n">TRAPS</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">Symbol</span><span class="o">*</span> <span class="n">name</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">Handle</span>       <span class="n">loader</span><span class="p">;</span>
+  <span class="p">{</span>  <span class="n">MonitorLockerEx</span> <span class="n">ml</span><span class="p">(</span><span class="n">this_oop</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">());</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">this_oop</span><span class="o">-&gt;</span><span class="n">tag_at</span><span class="p">(</span><span class="n">which</span><span class="p">).</span><span class="n">is_unresolved_klass</span><span class="p">())</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">this_oop</span><span class="o">-&gt;</span><span class="n">tag_at</span><span class="p">(</span><span class="n">which</span><span class="p">).</span><span class="n">is_unresolved_klass_in_error</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">in_error</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">do_resolve</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="n">name</span>   <span class="o">=</span> <span class="n">this_oop</span><span class="o">-&gt;</span><span class="n">unresolved_klass_at</span><span class="p">(</span><span class="n">which</span><span class="p">);</span> <span class="c1">// 拿到目标类名</span>
+        <span class="n">loader</span> <span class="o">=</span> <span class="n">Handle</span><span class="p">(</span><span class="n">THREAD</span><span class="p">,</span> <span class="n">this_oop</span><span class="o">-&gt;</span><span class="n">pool_holder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">class_loader</span><span class="p">());</span> <span class="c1">//拿到当前类加载器</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span> <span class="c1">// unlocking constantPool</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">do_resolve</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// this_oop must be unlocked during resolve_or_fail</span>
+    <span class="n">oop</span> <span class="n">protection_domain</span> <span class="o">=</span> <span class="n">this_oop</span><span class="o">-&gt;</span><span class="n">pool_holder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">protection_domain</span><span class="p">();</span>
+    <span class="n">Handle</span> <span class="n">h_prot</span> <span class="p">(</span><span class="n">THREAD</span><span class="p">,</span> <span class="n">protection_domain</span><span class="p">);</span>
+    <span class="c1">// 执行加载。 用当前类加载器尝试去加载目标类</span>
+    <span class="n">Klass</span><span class="o">*</span> <span class="n">k_oop</span> <span class="o">=</span> <span class="n">SystemDictionary</span><span class="o">::</span><span class="n">resolve_or_fail</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">h_prot</span><span class="p">,</span> <span class="nb">true</span><span class="p">,</span> <span class="n">THREAD</span><span class="p">);</span>
+    <span class="n">KlassHandle</span> <span class="n">k</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">HAS_PENDING_EXCEPTION</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">k</span> <span class="o">=</span> <span class="n">KlassHandle</span><span class="p">(</span><span class="n">THREAD</span><span class="p">,</span> <span class="n">k_oop</span><span class="p">);</span>
+      <span class="c1">// preserve the resolved klass.</span>
+      <span class="n">mirror_handle</span> <span class="o">=</span> <span class="n">Handle</span><span class="p">(</span><span class="n">THREAD</span><span class="p">,</span> <span class="n">k_oop</span><span class="o">-&gt;</span><span class="n">java_mirror</span><span class="p">());</span>
+      <span class="c1">// Do access check for klasses</span>
+      <span class="n">verify_constant_pool_resolve</span><span class="p">(</span><span class="n">this_oop</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">THREAD</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div><p>上面源码，可以证明，A中用到B，会用A的加载器AL去尝试加载B。</p><p>另外，如果AL不是bootstrap loader，那么会触发Java层对应对象ClassLoader的loadClass方法，如下：</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">JavaCalls</span><span class="o">::</span><span class="n">call_virtual</span><span class="p">(</span><span class="o">&amp;</span><span class="n">result</span><span class="p">,</span>
+                              <span class="n">class_loader</span><span class="p">,</span>
+                              <span class="n">spec_klass</span><span class="p">,</span>
+                              <span class="n">vmSymbols</span><span class="o">::</span><span class="n">loadClass_name</span><span class="p">(),</span> <span class="c1">// = "loadClass"</span>
+                              <span class="n">vmSymbols</span><span class="o">::</span><span class="n">string_class_signature</span><span class="p">(),</span> <span class="c1">// = "(Ljava/lang/String;)Ljava/lang/Class;"</span>
+                              <span class="n">string</span><span class="p">,</span>
+                              <span class="n">CHECK_</span><span class="p">(</span><span class="n">nh</span><span class="p">));</span> <span class="c1">// 调用到Java的 loadClass方法</span>
+</code></pre></div></div><p>在loadClass中，一般会选择自己加载，调用defineClass返回Class给虚拟机；或者选择委派，委派给别的加载器去loadClass。</p><p>那么，这里，大家可能会想到一个问题，AppClassLoader去加载的java/lang/Float,但这个类最终必然被委派给BootstrapClassLoader去加载，那么下次AppClassLoader还会去再尝试加载一遍java/langFloat吗？</p><p>答案是否定的。AppClassLoader尝试加载过Float，即使，它最后不是自己define的，但它也会被记在自己的加载器上，下次JVM层这个加载器需要加载Float这个类，会发现自己已经loadClass过了，则直接返回实际被bootstrapClassLoader define的类Float。</p><p>以下图，说明了这种情况：</p><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/classloader_jvm_view_1.jpeg" alt="" /></p><p>上图可以看到，一个类加载器L只要尝试过去load一个类A，那么不管最后这个类A的加载器是不是L，这个类A都会被记录在加载器L中，L下次不会再触发A的加载，而是直接从缓存取。</p><p>这个在JVM中数据结构的实现，是一个开散列哈希表。ClassLoader和类的名称，计算出hash值来存储。因此ClassLoader+类名唯一确定了一个类。如下图。</p><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/classloader_jvm_view_2.jpeg" alt="" /></p><h3 id="jdk父委派机制">JDK父委派机制</h3><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassLoader</span><span class="o">{</span>
+  <span class="kd">protected</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="nc">String</span> <span class="n">name</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">resolve</span><span class="o">)</span>
+        <span class="kd">throws</span> <span class="nc">ClassNotFoundException</span>
+    <span class="o">{</span>
+        <span class="kd">synchronized</span> <span class="o">(</span><span class="n">getClassLoadingLock</span><span class="o">(</span><span class="n">name</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// First, check if the class has already been loaded</span>
+            <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">c</span> <span class="o">=</span> <span class="n">findLoadedClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                <span class="kt">long</span> <span class="n">t0</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
+                <span class="k">try</span> <span class="o">{</span>
+                    <span class="k">if</span> <span class="o">(</span><span class="n">parent</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                        <span class="n">c</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+                    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                        <span class="n">c</span> <span class="o">=</span> <span class="n">findBootstrapClassOrNull</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+                    <span class="o">}</span>
+                <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">ClassNotFoundException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="c1">// ClassNotFoundException thrown if class not found</span>
+                    <span class="c1">// from the non-null parent class loader</span>
+                <span class="o">}</span>
+
+                <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="c1">// If still not found, then invoke findClass in order</span>
+                    <span class="c1">// to find the class.</span>
+                    <span class="kt">long</span> <span class="n">t1</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">findClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+
+                    <span class="c1">// this is the defining class loader; record the stats</span>
+                    <span class="n">sun</span><span class="o">.</span><span class="na">misc</span><span class="o">.</span><span class="na">PerfCounter</span><span class="o">.</span><span class="na">getParentDelegationTime</span><span class="o">().</span><span class="na">addTime</span><span class="o">(</span><span class="n">t1</span> <span class="o">-</span> <span class="n">t0</span><span class="o">);</span>
+                    <span class="n">sun</span><span class="o">.</span><span class="na">misc</span><span class="o">.</span><span class="na">PerfCounter</span><span class="o">.</span><span class="na">getFindClassTime</span><span class="o">().</span><span class="na">addElapsedTimeFrom</span><span class="o">(</span><span class="n">t1</span><span class="o">);</span>
+                    <span class="n">sun</span><span class="o">.</span><span class="na">misc</span><span class="o">.</span><span class="na">PerfCounter</span><span class="o">.</span><span class="na">getFindClasses</span><span class="o">().</span><span class="na">increment</span><span class="o">();</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">resolve</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">resolveClass</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="n">c</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>可以看出来，当一个ClassLoader被要求加载某个类时，它会优先委派给父加载器去loadClass，当父加载器加载到了，则自己将其return。如果所有父加载器都加载不到，则自己去findClass，再由自己定义。 否则，抛ClassNotFoundException。</p><p>那么结合上面说的JVM的一些知识点，这个要加载的类最终会挂载哪些加载器上？ 1. 实际去define它的loader 2.第一个被JVM调用loadClass的加载器。 （就像前面的java/lang/Float会挂在BootstrapClassLoader和AppClassLoader）</p><p>注意到这个resolveClass。它是干啥的呢？</p><p>在openjdk8中，似乎没啥用。</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">JNIEXPORT</span> <span class="kt">void</span> <span class="n">JNICALL</span>
+<span class="nf">Java_java_lang_ClassLoader_resolveClass0</span><span class="p">(</span><span class="n">JNIEnv</span> <span class="o">*</span><span class="n">env</span><span class="p">,</span> <span class="n">jobject</span> <span class="k">this</span><span class="p">,</span>
+                                         <span class="n">jclass</span> <span class="n">cls</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cls</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">JNU_ThrowNullPointerException</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">JVM_ResolveClass</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">cls</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">JVM_ENTRY</span><span class="p">(</span><span class="kt">void</span><span class="p">,</span> <span class="n">JVM_ResolveClass</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="n">jclass</span> <span class="n">cls</span><span class="p">))</span>
+  <span class="n">JVMWrapper</span><span class="p">(</span><span class="s">"JVM_ResolveClass"</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">PrintJVMWarnings</span><span class="p">)</span> <span class="n">warning</span><span class="p">(</span><span class="s">"JVM_ResolveClass not implemented"</span><span class="p">);</span>
+<span class="n">JVM_END</span>
+</code></pre></div></div><h3 id="最后来看一下类加载流程">最后来看一下类加载流程</h3><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/classloader_delegation.png" alt="" /></p><p>（下面流程标号和图中红箭头标号一致） （流程省略了findLoadedClass,findBootstrapClassOrNull的JNI调用）</p><p>（假设W被ExtClassLoader加载）</p><ol><li><p>执行到W.valueOf，发现W未被A的加载器AppClassLoader加载</p></li><li><p>开始执行类加载</p></li><li><p>调用AppClassLoader的loadClass方法，并提供类名W</p></li><li><p>AppClassLoader findLoadedClass无果直接委派，调用父加载器ExtClassLoader的loadClass</p></li><li><p>ExtClassLoader findLoadedClass无果直接委派，JNI调用findBootstrapClassOrNull ，这里箭头省了，返回的null，没加载到。</p></li><li><p>返回null给ExtClassLoader，ExtClassLoader自己加载</p></li><li><p>ExtClassLoader把字节码流生成，JNI调用defineClass1</p></li><li><p>JVM解析类，并执行操作A，把W类(Klass)挂在ExtClassLoader上，并返回W的Class反射模型</p></li><li><p>ExtClassLoader将Class返回给AppClassLoader</p></li><li><p>AppClassLoader将Class返回给第3步中JVM的类加载方法，执行操作B，把W类(Klass)挂在AppClassLoader上</p></li><li><p>解释执行W.valueOf的类加载完成</p></li><li><p>继续后续的解释执行</p></li></ol><h1 id="类增强策略">类增强策略</h1><p>面向使用过sandbox的读者。下面举个简单例子。</p><p>例如，我有个类Test的add方法（图最左侧），我要让他函数开头直接返回10，我需要编写图右上方的代码。</p><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/sandbox_machanism.png" alt="" /></p><p>当调用onWatch时，发生了什么？</p><ol><li><p>为onWatch中的listener分配id，并建立id到listener的映射，存储在listenerId映射表中。</p></li><li><p>根据onClass,onBehavior规则，扫描所有加载了的字节码，最终对Test的add进行字节码增强</p></li><li><p>字节码增强前后的代码如图箭头A来连接，绿色部分为植入的代码。</p></li></ol><p>那么，当add方法被执行时，是怎么个步骤？（见图蓝色箭头，箭头标号和下方一致）</p><ol><li><p>调用间谍类Spy的spyMethodOnBefore，并传递listenerId和方法入参</p></li><li><p>间谍类Spy的spyMethodOnBefore带着listenerId去查listenerId映射表</p></li><li><p>查表得到对应的listener对象</p></li><li><p>调用listener.before(advice)方法 (advice包含一些参数、环境信息需要生成)</p></li><li><p>before方法中,调用的ProcessController的returnImmediately事件 (具体是抛个携带信息的异常)</p></li><li><p>解析前一条中的ProcessController事件(具体是catch异常，并拿到异常中的信息)，返回携带信息的Spy.Ret对象</p></li></ol><p>而后，绿色部分，植入的代码，就可以根据Spy.Ret对象内容来修改程序后续行为啦。</p><p>上面是一个简单的例子，大致讲一下，整个框架的核心原理。那么接下来，补充一点点的细节。</p><h2 id="目标类代码植入">目标类代码植入</h2><p>例如，有一个类：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Test</span><span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">add</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">){</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>那么，为了控制这个类的行为，sandbox的transformer会往目标类（EventWatchBuilder控制）中，插入一些代码，插入后的add方法长这样：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Test</span><span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">add</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">){</span>
+    <span class="k">try</span><span class="o">{</span>
+      <span class="nc">Object</span><span class="o">[]</span> <span class="n">params</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Object</span><span class="o">[]{</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">};</span>
+      <span class="nc">Spy</span><span class="o">.</span><span class="na">Ret</span> <span class="n">retOnBefore</span> <span class="o">=</span> <span class="nc">Spy</span><span class="o">.</span><span class="na">spyMethodOnBefore</span><span class="o">(</span><span class="n">params</span><span class="o">,</span> <span class="mi">10001</span><span class="o">);</span> <span class="c1">// 10001是指：用户的Event的编号，会用Map绑定</span>
+      <span class="k">if</span><span class="o">(</span><span class="n">retOnBefore</span><span class="o">.</span><span class="na">state</span> <span class="o">==</span> <span class="no">I_RETURN</span><span class="o">)</span> <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">retOnBefore</span><span class="o">.</span><span class="na">object</span><span class="o">;</span>
+      <span class="k">if</span><span class="o">(</span><span class="n">retOnBefore</span><span class="o">.</span><span class="na">state</span> <span class="o">==</span> <span class="no">I_THROWS</span><span class="o">)</span> <span class="kd">throws</span> <span class="o">(</span><span class="nc">Throwable</span><span class="o">)</span> <span class="n">retOnBefore</span><span class="o">.</span><span class="na">object</span><span class="o">;</span>
+
+      <span class="n">a</span> <span class="o">=</span> <span class="n">params</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span> <span class="n">b</span> <span class="o">=</span> <span class="n">params</span><span class="o">[</span><span class="mi">1</span><span class="o">];</span>
+      <span class="kt">int</span> <span class="n">r</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">;</span>
+
+      <span class="nc">Spy</span><span class="o">.</span><span class="na">Ret</span> <span class="n">retOnReturn</span> <span class="o">=</span> <span class="nc">Spy</span><span class="o">.</span><span class="na">spyMethodOnReturn</span><span class="o">(</span><span class="n">r</span><span class="o">,</span> <span class="mi">10001</span><span class="o">);</span>
+      <span class="k">if</span><span class="o">(</span><span class="n">retOnReturn</span><span class="o">.</span><span class="na">state</span> <span class="o">==</span> <span class="no">I_RETURN</span><span class="o">)</span> <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">retOnReturn</span><span class="o">.</span><span class="na">object</span><span class="o">;</span>
+      <span class="k">if</span><span class="o">(</span><span class="n">retOnReturn</span><span class="o">.</span><span class="na">state</span> <span class="o">==</span> <span class="no">I_THROWS</span><span class="o">)</span> <span class="kd">throws</span> <span class="o">(</span><span class="nc">Throwable</span><span class="o">)</span> <span class="n">retOnReturn</span><span class="o">.</span><span class="na">object</span><span class="o">;</span>
+
+      <span class="k">return</span> <span class="n">r</span><span class="o">;</span>
+    <span class="o">}</span><span class="k">catch</span> <span class="o">(</span><span class="nc">Throwable</span> <span class="n">cause</span><span class="o">){</span>
+      <span class="nc">Spy</span><span class="o">.</span><span class="na">Ret</span> <span class="n">retOnThrows</span> <span class="o">=</span> <span class="nc">Spy</span><span class="o">.</span><span class="na">spyMethodOnThrows</span><span class="o">(</span><span class="n">cause</span><span class="o">,</span> <span class="mi">10001</span><span class="o">);</span>
+      <span class="k">if</span><span class="o">(</span><span class="n">retOnThrows</span><span class="o">.</span><span class="na">state</span> <span class="o">==</span> <span class="no">I_RETURN</span><span class="o">)</span> <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">retOnThrows</span><span class="o">.</span><span class="na">object</span><span class="o">;</span>
+      <span class="k">if</span><span class="o">(</span><span class="n">retOnThrows</span><span class="o">.</span><span class="na">state</span> <span class="o">==</span> <span class="no">I_THROWS</span><span class="o">)</span> <span class="kd">throws</span> <span class="o">(</span><span class="nc">Throwable</span><span class="o">)</span> <span class="n">retOnThrows</span><span class="o">.</span><span class="na">object</span><span class="o">;</span>
+      <span class="kd">throws</span> <span class="n">cause</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p><strong>Spy方法我省去了一些非核心的参数，便于观看</strong></p><p>可以看到，往add方法的 方法开始时，return前，throws前，埋藏了改变程序执行逻辑的程序段。例如before（函数开始时），根据Spy.onBofore返回值retOnBefore的state，会选择是直接return(I_RETURN)还是抛异常(I_THROWS)还是不影响程序执行(I_其他)。</p><p>那么Spy类是什么呢？这个Spy类在sandbox-spy模块。前面拿到了Instrumentation，可以通过appendToBootstrapClassLoaderSearch，将Spy类所在的jar包，加入到BootstrapClassLoader的扫描路径，只要Spy被挂在根加载器，那么所有的Java类都能够访问到这个类。</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Spy</span><span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Ret</span> <span class="nf">spyMethodOnBefore</span><span class="o">(</span><span class="kd">final</span> <span class="nc">Object</span><span class="o">[]</span> <span class="n">argumentArray</span><span class="o">,</span>
+                                        <span class="kd">final</span> <span class="kt">int</span> <span class="n">listenerId</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+      <span class="k">try</span> <span class="o">{</span>
+          <span class="kd">final</span> <span class="nc">SpyHandler</span> <span class="n">spyHandler</span> <span class="o">=</span> <span class="n">namespaceSpyHandlerMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">namespace</span><span class="o">);</span>
+          <span class="k">if</span> <span class="o">(</span><span class="kc">null</span> <span class="o">==</span> <span class="n">spyHandler</span><span class="o">)</span> <span class="o">{</span>
+              <span class="k">return</span> <span class="nc">Ret</span><span class="o">.</span><span class="na">RET_NONE</span><span class="o">;</span>
+          <span class="o">}</span>
+          <span class="k">return</span> <span class="n">spyHandler</span><span class="o">.</span><span class="na">handleOnBefore</span><span class="o">(</span> <span class="c1">// 最后会转发给对应的Event</span>
+                  <span class="n">listenerId</span><span class="o">,</span> <span class="n">argumentArray</span>
+          <span class="o">);</span>
+      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">Throwable</span> <span class="n">cause</span><span class="o">)</span> <span class="o">{</span>
+          <span class="n">handleException</span><span class="o">(</span><span class="n">cause</span><span class="o">);</span>
+          <span class="k">return</span> <span class="nc">Ret</span><span class="o">.</span><span class="na">RET_NONE</span><span class="o">;</span>
+      <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+          <span class="n">selfCallBarrier</span><span class="o">.</span><span class="na">exit</span><span class="o">(</span><span class="n">thread</span><span class="o">,</span> <span class="n">node</span><span class="o">);</span>
+      <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>handleOnBefore最终会走到：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">EventListenerHandler</span> <span class="kd">implements</span> <span class="nc">SpyHandler</span> <span class="o">{</span>
+
+  <span class="kd">private</span> <span class="nc">Spy</span><span class="o">.</span><span class="na">Ret</span> <span class="nf">handleEvent</span><span class="o">(</span><span class="kd">final</span> <span class="kt">int</span> <span class="n">listenerId</span><span class="o">,</span>
+                                  <span class="kd">final</span> <span class="kt">int</span> <span class="n">processId</span><span class="o">,</span>
+                                  <span class="kd">final</span> <span class="kt">int</span> <span class="n">invokeId</span><span class="o">,</span>
+                                  <span class="kd">final</span> <span class="nc">Event</span> <span class="n">event</span><span class="o">,</span>
+                                  <span class="kd">final</span> <span class="nc">EventProcessor</span> <span class="n">processor</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+    <span class="kd">final</span> <span class="nc">EventListener</span> <span class="n">listener</span> <span class="o">=</span> <span class="n">processor</span><span class="o">.</span><span class="na">listener</span><span class="o">;</span>
+
+    <span class="c1">// 如果当前事件不在事件监听器处理列表中，则直接返回，不处理事件</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">contains</span><span class="o">(</span><span class="n">processor</span><span class="o">.</span><span class="na">eventTypes</span><span class="o">,</span> <span class="n">event</span><span class="o">.</span><span class="na">type</span><span class="o">))</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">newInstanceForNone</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="n">listener</span><span class="o">.</span><span class="na">onEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span> <span class="c1">// 触发用户编写的onEvent事件</span>
+    <span class="o">}</span>
+    <span class="c1">// 代码执行流程变更</span>
+    <span class="k">catch</span> <span class="o">(</span><span class="nc">ProcessControlException</span> <span class="n">pce</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kd">final</span> <span class="nc">EventProcessor</span><span class="o">.</span><span class="na">Process</span> <span class="n">process</span> <span class="o">=</span> <span class="n">processor</span><span class="o">.</span><span class="na">processRef</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+        <span class="kd">final</span> <span class="nc">ProcessControlException</span><span class="o">.</span><span class="na">State</span> <span class="n">state</span> <span class="o">=</span> <span class="n">pce</span><span class="o">.</span><span class="na">getState</span><span class="o">();</span>
+        <span class="k">switch</span> <span class="o">(</span><span class="n">state</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// 立即返回对象</span>
+            <span class="k">case</span> <span class="nl">RETURN_IMMEDIATELY:</span> <span class="o">{</span>
+                <span class="c1">// 让流程立即返回</span>
+                <span class="k">return</span> <span class="nc">Spy</span><span class="o">.</span><span class="na">Ret</span><span class="o">.</span><span class="na">newInstanceForReturn</span><span class="o">(</span><span class="n">pce</span><span class="o">.</span><span class="na">getRespond</span><span class="o">());</span>
+            <span class="o">}</span>
+            <span class="c1">// 立即抛出异常</span>
+            <span class="k">case</span> <span class="nl">THROWS_IMMEDIATELY:</span> <span class="o">{</span>
+                <span class="kd">final</span> <span class="nc">Throwable</span> <span class="n">throwable</span> <span class="o">=</span> <span class="o">(</span><span class="nc">Throwable</span><span class="o">)</span> <span class="n">pce</span><span class="o">.</span><span class="na">getRespond</span><span class="o">();</span>
+                <span class="c1">// 让流程立即抛出</span>
+                <span class="k">return</span> <span class="nc">Spy</span><span class="o">.</span><span class="na">Ret</span><span class="o">.</span><span class="na">newInstanceForThrows</span><span class="o">(</span><span class="n">throwable</span><span class="o">);</span>
+
+            <span class="o">}</span>
+            <span class="c1">// 什么都不操作，立即返回</span>
+            <span class="k">case</span> <span class="nl">NONE_IMMEDIATELY:</span>
+            <span class="k">default</span><span class="o">:</span> <span class="o">{</span>
+                <span class="k">return</span> <span class="nf">newInstanceForNone</span><span class="o">();</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="c1">// 默认返回不进行任何流程变更</span>
+    <span class="k">return</span> <span class="nf">newInstanceForNone</span><span class="o">();</span>
+  <span class="o">}</span> 
+<span class="o">}</span>   
+</code></pre></div></div><p>在用户编写的onEvent中，会利用ProcessController来控制目标程序流，以直接return为例:</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ProcessController</span><span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">returnImmediately</span><span class="o">(</span><span class="kd">final</span> <span class="nc">Object</span> <span class="n">object</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">ProcessControlException</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nf">ProcessControlException</span><span class="o">(</span><span class="no">RETURN_IMMEDIATELY</span><span class="o">,</span> <span class="n">object</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>这里抛出的异常，在EventListenerHandler的handleEvent中被接住，返回对应的对象给Spy类，然后再返回给Test中的add方法，<strong>最终达到用户的event控制add方法的行为的目的</strong>。</p><h2 id="asm-lock">ASM Lock</h2><p>读到字节码注入那部分代码的同学，可能会看到这个EventWeaver.java ：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/**
+ * 用于Call的代码锁
+ */</span>
+<span class="kd">class</span> <span class="nc">CallAsmCodeLock</span> <span class="kd">extends</span> <span class="nc">AsmCodeLock</span> <span class="o">{</span>
+
+    <span class="nc">CallAsmCodeLock</span><span class="o">(</span><span class="nc">AdviceAdapter</span> <span class="n">aa</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">(</span>
+                <span class="n">aa</span><span class="o">,</span>
+                <span class="k">new</span> <span class="kt">int</span><span class="o">[]{</span>
+                        <span class="no">ICONST_2</span><span class="o">,</span> <span class="no">POP</span>
+                <span class="o">},</span>
+                <span class="k">new</span> <span class="kt">int</span><span class="o">[]{</span>
+                        <span class="no">ICONST_3</span><span class="o">,</span> <span class="no">POP</span>
+                <span class="o">}</span>
+        <span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div><p>sandbox在植入代码前，都会先插入ICONST_2,POP， 在植入一段代码后，都会插入ICONST_3,POP。</p><pre><code class="language-asm">ICONST_2
+POP
+
+// sandbox插入的一段指令。。。
+
+ICONST_3
+POP
+</code></pre><p>然而，ICONST_X，然后POP。即：压栈，再弹出，对字节码解释执行没有任何影响。那么这个操作是什么用的呢？</p><p><strong>我个人认为，</strong> 这是用于还原字节码的。如果我想去扒取(例如althas)一个正在运行应用的字节码，那么拿到的其实可能是被sandbox注入过指令的字节码。那么有个这个ICONST_X,POP标记（正常编译器不会生成这组无用指令），就可以在应用外部，轻松清除清除sandbox的注入，拿到原始的字节码，用于后续可能进行的分析。干净又卫生。</p><h2 id="sandbox卸载时字节码的还原">sandbox卸载时字节码的还原</h2><p>Instrumentation调用removeTransformer，把所有Transformer都拔掉。然后再调用retransformClasses，把变更过的类都retransform一下，就能还原回最初的字节码了。</p><p>为啥？因为JVM会保留一份最开始没有被Transformer变更过的字节码。</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">instanceKlassHandle</span> <span class="n">ClassFileParser</span><span class="o">::</span><span class="n">parseClassFile</span><span class="p">(</span><span class="n">Symbol</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span>
+                                                    <span class="n">ClassLoaderData</span><span class="o">*</span> <span class="n">loader_data</span><span class="p">,</span>
+                                                    <span class="n">Handle</span> <span class="n">protection_domain</span><span class="p">,</span>
+                                                    <span class="n">KlassHandle</span> <span class="n">host_klass</span><span class="p">,</span>
+                                                    <span class="n">GrowableArray</span><span class="o">&lt;</span><span class="n">Handle</span><span class="o">&gt;*</span> <span class="n">cp_patches</span><span class="p">,</span>
+                                                    <span class="n">TempNewSymbol</span><span class="o">&amp;</span> <span class="n">parsed_name</span><span class="p">,</span>
+                                                    <span class="kt">bool</span> <span class="n">verify</span><span class="p">,</span>
+                                                    <span class="n">TRAPS</span><span class="p">)</span> <span class="p">{</span>
+
+  <span class="c1">// When a retransformable agent is attached, JVMTI caches the</span>
+  <span class="c1">// class bytes that existed before the first retransformation.</span>
+  <span class="c1">// If RedefineClasses() was used before the retransformable</span>
+  <span class="c1">// agent attached, then the cached class bytes may not be the</span>
+  <span class="c1">// original class bytes.</span>
+
+<span class="p">}</span>
+</code></pre></div></div><p>看上面那段注释。</p><h1 id="sandbox模块的可拔插">sandbox、模块的可拔插</h1><h2 id="模块的冻结">模块的冻结</h2><p>frozen模块时，注入的字节码不动，控制listenerId映射表，就可以了：</p><p><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/sandbox_machanism.png" alt="" /></p><p>这个图，把这个模块所有的listenerId从 listenerId映射表中删除。</p><p>那么，add方法运行时，箭头3拿到的listener是null，直接返回state=RET_STATE_NONE的Spy.Ret，表示绿色部分两个if都不成立，不影响程序流执行。</p><h2 id="模块的卸载">模块的卸载</h2><p>delete模块，直接把这个模块对应的transformer都给删掉，然后retransform一下所有类，那么绿色部分的代码就移除了，不会再干预，原来的程序。</p><h2 id="sandbox的卸载">sandbox的卸载</h2><ol><li><p>卸载所有模块</p></li><li><p>关闭JettyServer（sandbox会启动一个JettyServer，用来和外界通信，外面可以通过http报文来间接控制sandbox的一些模块控制行为）</p></li></ol><div style="margin-top:2em;padding:0 1.5em;border:1px solid #d3d3d3;background-color:#deebf7"><h3>文档信息</h3><ul><li>本文作者：<a href="https://ykry35.github.io/blog.github.io" target="_blank">Chaoxin Zhou</a></li><li>本文链接：<a href="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/" target="_blank">https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/</a></li><li>版权声明：自由转载-非商用-非衍生-保持署名（<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/deed.zh" target="_blank">创意共享3.0许可证</a>）</li></ul></div></article><div class="share"></div><div class="comment"><div id="gitalk-container"></div><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/gitalk/gitalk.css"> <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script> <script> var gitalk = new Gitalk({ id: '/2021/12/20/how_does_jvmsandbox-works/', clientID: 'a3a0fbaad3e91f2e2342', clientSecret: 'f82d523505992a3aab199b818ecff081b65f1a60', repo: 'blog.github.io', owner: 'ykry35', admin: ['ykry35'], labels: ['gitment'], perPage: 50, }); gitalk.render('gitalk-container'); </script></div></div><div class="column one-fourth"><h3>Search</h3><div id="site_search"> <input style="width:96%" type="text" id="search_box" placeholder="Search"></div><ul id="search_results" style="font-size:14px;list-style-type:none;padding-top:10px;padding-left:10px;"></ul><script src="https://ykry35.github.io/blog.github.io/assets/js/simple-jekyll-search.min.js"></script> <script type="text/javascript"> SimpleJekyllSearch({ searchInput: document.getElementById('search_box'), resultsContainer: document.getElementById('search_results'), json: 'https://ykry35.github.io/blog.github.io/assets/search_data.json?v=1640149055', searchResultTemplate: '<li><a href="{url}" title="{title}">{title}</a></li>', noResultsText: 'No results found', limit: 10, fuzzy: false, exclude: ['Welcome'] }) </script><h3 class="post-directory-title mobile-hidden">Table of Contents</h3><div id="post-directory-module" class="mobile-hidden"><section class="post-directory"><dl></dl></section></div><script src="https://ykry35.github.io/blog.github.io/assets/js/jquery.toc.js"></script></div></div></section><footer class="container"><div class="site-footer" role="contentinfo"><div class="copyright left mobile-block"> © 2021 <span title="Chaoxin Zhou">Chaoxin Zhou</span> <a href="javascript:window.scrollTo(0,0)" class="right mobile-visible">TOP</a></div><ul class="site-footer-links right mobile-hidden"><li> <a href="javascript:window.scrollTo(0,0)" >TOP</a></li></ul><a href="https://github.com/YKRY35/" target="_blank" aria-label="view source code"> <span class="mega-octicon octicon-mark-github" title="GitHub"></span> </a><ul class="site-footer-links mobile-hidden"><li> <a href="https://ykry35.github.io/blog.github.io/" title="首页" target="">首页</a></li><li> <a href="https://ykry35.github.io/blog.github.io/categories/" title="分类" target="">分类</a></li><li> <a href="https://ykry35.github.io/blog.github.io/wiki/" title="维基" target="">维基</a></li><li> <a href="https://ykry35.github.io/blog.github.io/links/" title="链接" target="">链接</a></li><li> <a href="https://ykry35.github.io/blog.github.io/about/" title="关于" target="">关于</a></li><li><a href="https://ykry35.github.io/blog.github.io/feed.xml"><span class="octicon octicon-rss" style="color:orange;"></span></a></li></ul></div></footer><div class="tools-wrapper"> <a class="gotop" href="#" title="回到顶部"><span class="octicon octicon-arrow-up"></span></a></div><script src="https://ykry35.github.io/blog.github.io/assets/js/geopattern.js"></script> <script> jQuery(document).ready(function($) { $('.geopattern').each(function(){ $(this).geopattern($(this).data('pattern-id')); }); /* hljs.initHighlightingOnLoad(); */ }); </script></body></html>
