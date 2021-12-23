@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-12-22T08:48:22+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jvm-sandbox原理</title><link href="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/" rel="alternate" type="text/html" title="jvm-sandbox原理" /><published>2021-12-20T00:00:00+00:00</published><updated>2021-12-20T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/">&lt;h1 id=&quot;操纵应用字节码的权利&quot;&gt;操纵应用字节码的权利&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ykry35.github.io/blog.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ykry35.github.io/blog.github.io/" rel="alternate" type="text/html" /><updated>2021-12-23T08:47:56+00:00</updated><id>https://ykry35.github.io/blog.github.io/feed.xml</id><title type="html">Zhou</title><subtitle>周某人的个人博客，公众号：无、、、</subtitle><author><name>Chaoxin Zhou</name></author><entry><title type="html">jvm-sandbox原理</title><link href="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/" rel="alternate" type="text/html" title="jvm-sandbox原理" /><published>2021-12-20T00:00:00+00:00</published><updated>2021-12-20T00:00:00+00:00</updated><id>https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works</id><content type="html" xml:base="https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/">&lt;h1 id=&quot;操纵应用字节码的权利&quot;&gt;操纵应用字节码的权利&lt;/h1&gt;
 
 &lt;h2 id=&quot;jdk层的使用&quot;&gt;JDK层的使用&lt;/h2&gt;
 
@@ -314,7 +314,11 @@
 
 &lt;h3 id=&quot;jvm哪个加载器来加载&quot;&gt;JVM哪个加载器来加载&lt;/h3&gt;
 
-&lt;p&gt;JVM在解析类时，发现类未加载，会使用当前类的类加载器去加载目标类。&lt;/p&gt;
+&lt;p&gt;JVM在解析类时，发现类未加载，会使用定义当前类的类加载器(defining loader)去加载目标类。&lt;/p&gt;
+
+&lt;p&gt;defining loader: 定义它的加载器&lt;/p&gt;
+
+&lt;p&gt;initiating loader: 触发加载它的加载器&lt;/p&gt;
 
 &lt;p&gt;例如，还是上面那个例子。&lt;/p&gt;
 
@@ -383,7 +387,7 @@
 
 &lt;p&gt;以下图，说明了这种情况：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/classloader_jvm_view_1.jpeg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://ykry35.github.io/blog.github.io/assets/images/posts/how_does_jvmsandbox-works/classloader_jvm_view_1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;上图可以看到，一个类加载器L只要尝试过去load一个类A，那么不管最后这个类A的加载器是不是L，这个类A都会被记录在加载器L中，L下次不会再触发A的加载，而是直接从缓存取。&lt;/p&gt;
 
