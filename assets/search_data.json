@@ -46,6 +46,14 @@
   
   
     {
+      "title"    : "jacoco改造之探针外置",
+      "url"      : "https://ykry35.github.io/blog.github.io/p2/testerhome/jacoco_outer_probes/",
+      "keywords" : "JVM, hotspot, Java"
+    } ,
+  
+  
+  
+    {
       "title"    : "Links",
       "url"      : "https://ykry35.github.io/blog.github.io/links/",
       "keywords" : "友情链接"
@@ -118,6 +126,14 @@
       
       "url"      : "https://ykry35.github.io/blog.github.io/2021/12/20/how_does_jvmsandbox-works/",
       "keywords" : "sandbox, JVM"
+    } ,
+  
+    {
+      "title"    : "Jvm_vtable",
+      "category" : "",
+      
+      "url"      : "https://ykry35.github.io/blog.github.io/2022/01/04/jvm_vtable/",
+      "keywords" : ""
     } ,
   
     {
