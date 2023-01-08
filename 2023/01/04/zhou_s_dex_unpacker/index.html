@@ -1,0 +1,702 @@
+<!DOCTYPE html><html lang="zh-cmn-Hans" prefix="og: http://ogp.me/ns#" class="han-init"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /><title>周氏APP脱壳法 &mdash; Zhou</title><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/primer-css/css/primer.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/collection.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/repo-card.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/sections/repo-list.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/components/boxed-group.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/globals/common.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/globals/responsive.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/posts/index.css"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/octicons/octicons/octicons.css"><link href="https://ykry35.github.io/blog.github.io/assets/vendor/viewerjs/viewer.min.css" rel="stylesheet"><link href="https://ykry35.github.io/blog.github.io/assets/css/globals/viewerjs.cust.css" rel="stylesheet"><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/css/code_theme/github.css"><link rel="canonical" href="https://ykry35.github.io/blog.github.io/2023/01/04/zhou_s_dex_unpacker/"><link rel="alternate" type="application/atom+xml" title="Zhou" href="https://ykry35.github.io/blog.github.io/feed.xml"><link rel="shortcut icon" href="https://ykry35.github.io/blog.github.io/favicon.ico"><meta property="og:title" content="周氏APP脱壳法"><meta name="keywords" content="逆向, 逆向"><meta name="og:keywords" content="逆向, 逆向"><meta name="description" content=""><meta name="og:description" content=""><meta property="og:url" content="https://ykry35.github.io/blog.github.io/2023/01/04/zhou_s_dex_unpacker/"><meta property="og:site_name" content="Zhou"><meta property="og:type" content="article"><meta property="og:locale" content="zh_CN" /><meta property="article:published_time" content="2023-01-04"> <script src="https://ykry35.github.io/blog.github.io/assets/vendor/jquery/dist/jquery.min.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/js/jquery-ui.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/js/main.js"></script> <script src="https://ykry35.github.io/blog.github.io/assets/vendor/viewerjs/viewer.min.js"></script></head><body class="" data-mz=""><header class="site-header"><div class="container"><h1><a href="https://ykry35.github.io/blog.github.io/" title="Zhou"><span class="octicon octicon-mark-github"></span> Zhou</a></h1><button class="collapsed mobile-visible" type="button" onclick="toggleMenu();"> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button><nav class="site-header-nav" role="navigation"> <a href="https://ykry35.github.io/blog.github.io/" class=" site-header-nav-item" target="" title="首页">首页</a> <a href="https://ykry35.github.io/blog.github.io/categories/" class=" site-header-nav-item" target="" title="分类">分类</a> <a href="https://ykry35.github.io/blog.github.io/wiki/" class=" site-header-nav-item" target="" title="维基">维基</a> <a href="https://ykry35.github.io/blog.github.io/links/" class=" site-header-nav-item" target="" title="链接">链接</a> <a href="https://ykry35.github.io/blog.github.io/about/" class=" site-header-nav-item" target="" title="关于">关于</a></nav></div></header><section class="collection-head small geopattern" data-pattern-id="周氏APP脱壳法"><div class="container"><div class="columns"><div class="column three-fourths"><div class="collection-title"><h1 class="collection-header">周氏APP脱壳法</h1><div class="collection-info"> <span class="meta-info"> <span class="octicon octicon-calendar"></span> 2023/01/04 </span> <span class="meta-info"> <span class="octicon octicon-file-directory"></span> <a href="https://ykry35.github.io/blog.github.io/categories/#Android" title="Android">Android</a> </span></div></div></div><div class="column one-fourth mobile-hidden"><div class="collection-title"></div></div></div></div></section><section class="container content"><div class="columns"><div class="column three-fourths" ><article class="article-content markdown-body"><h1 id="前言">前言</h1><div id="jekyllconfig"> { "viewerjs": { "img_width": "260px" } }</div><blockquote><p>为什么要脱壳？</p></blockquote><p>现在的apk里的字节码dex文件，都是加密的，被保护起来了。直接反编译拿不到源码。</p><p>但是我想做外挂、做辅助，就得知道源码逻辑，对特定函数进行hook。</p><p>所以就得想办法拿到加密以前的字节码dex然后反编译得到源码。</p><blockquote><p>为什么要自己脱壳</p></blockquote><p>加壳与脱壳的斗争中，加壳技术不断迭代，加壳点各个厂商各不相同。只有把握原理，才能不受制于人。</p><blockquote><p>目标应用</p></blockquote><p>这里试了两个app。一个是《会玩》，另一个不便透露。均取得很好的效果。</p><p>接下来的说明都以会玩App(当前最新版)为例。</p><p>安卓系统以Android 8.0.0（AOSP OPR5.170623.014） 为例。</p><h1 id="前置知识">前置知识</h1><h2 id="加壳">加壳</h2><p>写安卓，用Java，Java编译产物字节码classes.dex，在这个APP的安装包APK的根目录下，如下图1.</p><p>我们要分析这个程序逻辑，直接解压apk，拿到classes.dex，用dex2jar反编译工具，反编译出源码，用jd-gui或者别的工具即可查看，如下图2.</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//jiake_01.png" alt="Picture 1" /></li><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//jiake_02.png" alt="Picture 2" /></li></ul><p>但是可以看出，图二反编译的结果只剩下这么几个类，这几个类其实就是壳程序。原来应用的程序被加密藏起来了。</p><p>运行壳程序时，壳程序会用native方法将原来的应用代码解密，放到内存，然后再动态的执行原来程序对应的入口（执行权转移）。</p><p></p><p></p><p></p><p>下面介绍一下<strong>加壳程序运行时的流程</strong>：</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//jiake_11.png" alt="Picture 1" /></li><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//jiake_12.png" alt="Picture 2" /></li></ul><ol><li><p>由于classes.dex被替换成了壳程序，所以我们启动APP时，启动的其实是壳程序，如图1。</p></li><li><p>壳程序运行后，会将加密后的源APK读取到内存，在内存中进行解密。</p></li><li><p>那么此时，壳程序代码和解密后的源程序都在内存中了，如图2。</p></li><li><p>这时，壳程序会找到源程序的程序入口，动态的去调用这个入口</p></li><li><p>那么，程序执行权就转移了，从壳程序转移到源程序</p></li><li><p>源程序开始执行后，程序开始正常运行。。</p></li></ol><p></p><p></p><p></p><p>可以看出，在APK中，应用源码被<strong>保护</strong>起来了；并且加壳后的APK运行时，由于解密程序的存在，该程序运行起来和没加过壳的程序<strong>运行效果一致</strong>，并不会影响程序逻辑。 这就是<strong>加壳</strong>。</p><h2 id="脱壳思路">脱壳思路</h2><blockquote><p><strong>一、调试解密流程</strong></p></blockquote><p>在加壳原理中，提到壳程序会在native层，将源APP解密放到内存中。那么在APP启动时，在和合适的地方<strong>中断程序</strong>，将内存指定位置的数据<strong>dump</strong>到本地，就可以拿到解密后的程序。</p><p>这个其实难度是比较大的，首先，由于是native方法，我们<strong>调试对象是ARM指令集</strong>；其次，<strong>解密程序很狡猾</strong>，它会构造出很多无用逻辑，干扰调试；再者，解密程序会<strong>检测自身是否被调试</strong>，如果没绕过被检测到，它会直接kill掉自身进程停止APP启动。</p><p>笔者水平有限，这部分了解甚少，放弃该思路，若干年后或许。。。</p><blockquote><p><strong>二、修改ART虚拟机源码</strong></p></blockquote><p>无论加壳程序将原来的程序类怎么加密，最后这个类执行时，一定得符合ART虚拟机的格式要求，因此在ART虚拟机的视角，它看到的任何类一定都是合法的（解密后的）。</p><p>所以，我们可以修改ART虚拟机的一些关键函数，将内存中的字节码数据拿出去。</p><p>举个网上比较多的脱壳点为例，就是DexFile类的构造函数：</p><pre><code class="language-C++">DexFile::DexFile(  const uint8_t* base,
+                 size_t size,
+                 const std::string&amp; location,
+                 uint32_t location_checksum,
+                 const OatDexFile* oat_dex_file){
+
+}
+</code></pre><p>DexFile这个类，是classes.dex加载到内存解析后的类，包含了所有的类信息。</p><p>我们看到base就是这个dex的内存基址，size是这个dex的大小，那么只要在这个函数里将[base, base+size]的地址内容<strong>dump</strong>到本地，就可以拿到这个Dex字节码。</p><p></p><p><strong>但是</strong>，这个方案只能适用于两三年前的加壳程序。由于DexFile这个构造函数执行时机是比较靠前的，因此在这里，我们拿到的仍然不是完整的Dex程序。</p><p>笔者经过研究，选择了别的脱壳点，大致思路和这个一致。</p><p>那么笔者主要研究点分两部分：ART虚拟机类加载、<会玩>壳程序特点。</会玩></p><h2 id="会玩壳程序特点">&lt;会玩&gt;壳程序特点</h2><blockquote><p><strong>一、 屏蔽了ofstream文件流</strong></p></blockquote><p>我们要dump程序，要用到文件流，但实际在DexFile::DexFile()中加入dump代码后发现，并没有文件写入ROM。</p><p>怀疑是应用权限问题，修改系统源码，直接让所有应用都能WRITE_EXTERNAL_STORAGE，无果。换了写目录，无果。</p><p>怀疑是加壳程序hook了ofstream，做了写文件内容的特征检测（因为应用自己是有数据写ROM的），不让写字节码特征的数据。于是把写的内容换成无意义字节，仍不行。</p><p>没法将内存数据写入ROM以供导出。唉。</p><p>这里，笔者的思路是，在电脑上起了个socket server，ART虚拟机内和server<strong>建立socket连接</strong>，将内存的数据通过网络发送到计算机。取得成功。</p><blockquote><p><strong>二、 引入了类似SafetyNet的东西</strong></p></blockquote><p>SafetyNet是Google和硬件产商做的系统完整性检测，专门检测操作系统是否被恶意修改过。</p><p>鄙人往app_process里面加了个头文件，直接会玩应用就起不来了。往ART虚拟机里面加代码，目前没被检测到。或许是app_process作为所有应用根基，太敏感了把，而且很容易检测。</p><blockquote><p><strong>三、 真实脱壳点靠后</strong></p></blockquote><p>这个壳，在Dex字节码规范上作文章，根据谷歌定的规范，反常态，把通常在内存中连续的Dex打散，打的东一点，西一点，但又符合规范能跑，给脱壳增加难度。</p><p>并且，脱掉壳的时机比较靠后，基本是在这个类必须要被使用之前(DefineClass)才把它完全还原。</p><h2 id="art虚拟机类加载机制">ART虚拟机类加载机制</h2><p>主要介绍ART虚拟机类加载和OpenJDK的HotSpot虚拟机不同之处。</p><p>这是找到合适的脱壳点 以及 写出外挂（基于Xposed）的关键。</p><h3 id="父委派机制">父委派机制</h3><p>我们熟悉的parent delegation(网上翻译较多 双亲委派)，在ART中的实现和Hotspot中的实现有较大区别。</p><p>前者在C++层实现，而后者在Java层实现。</p><p>class_linker.cc FindClassInBaseDexClassLoader节选</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kt">bool</span> <span class="n">ClassLinker</span><span class="o">::</span><span class="n">FindClassInBaseDexClassLoader</span><span class="p">(</span><span class="n">ScopedObjectAccessAlreadyRunnable</span><span class="o">&amp;</span> <span class="n">soa</span><span class="p">,</span>
+                                                <span class="n">Thread</span><span class="o">*</span> <span class="n">self</span><span class="p">,</span>
+                                                <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">descriptor</span><span class="p">,</span>
+                                                <span class="kt">size_t</span> <span class="n">hash</span><span class="p">,</span>
+                                                <span class="n">Handle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">ClassLoader</span><span class="o">&gt;</span> <span class="n">class_loader</span><span class="p">,</span>
+                                                <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Class</span><span class="o">&gt;*</span> <span class="n">result</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// guanjian......</span>
+  <span class="c1">// Termination case: boot class-loader.</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">IsBootClassLoader</span><span class="p">(</span><span class="n">soa</span><span class="p">,</span> <span class="n">class_loader</span><span class="p">.</span><span class="n">Get</span><span class="p">()))</span> <span class="p">{</span>
+    <span class="c1">// The boot class loader, search the boot class path.</span>
+    <span class="n">ClassPathEntry</span> <span class="n">pair</span> <span class="o">=</span> <span class="n">FindInClassPath</span><span class="p">(</span><span class="n">descriptor</span><span class="p">,</span> <span class="n">hash</span><span class="p">,</span> <span class="n">boot_class_path_</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">second</span> <span class="o">!=</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Class</span><span class="o">&gt;</span> <span class="n">klass</span> <span class="o">=</span> <span class="n">LookupClass</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">descriptor</span><span class="p">,</span> <span class="n">hash</span><span class="p">,</span> <span class="nb">nullptr</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">klass</span> <span class="o">!=</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+        <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="n">EnsureResolved</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">descriptor</span><span class="p">,</span> <span class="n">klass</span><span class="p">);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="n">DefineClass</span><span class="p">(</span><span class="n">self</span><span class="p">,</span>
+                              <span class="n">descriptor</span><span class="p">,</span>
+                              <span class="n">hash</span><span class="p">,</span>
+                              <span class="n">ScopedNullHandle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">ClassLoader</span><span class="o">&gt;</span><span class="p">(),</span>
+                              <span class="o">*</span><span class="n">pair</span><span class="p">.</span><span class="n">first</span><span class="p">,</span>
+                              <span class="o">*</span><span class="n">pair</span><span class="p">.</span><span class="n">second</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">result</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">CHECK</span><span class="p">(</span><span class="n">self</span><span class="o">-&gt;</span><span class="n">IsExceptionPending</span><span class="p">())</span> <span class="o">&lt;&lt;</span> <span class="n">descriptor</span><span class="p">;</span>
+        <span class="n">self</span><span class="o">-&gt;</span><span class="n">ClearException</span><span class="p">();</span>
+      <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n">StackHandleScope</span><span class="o">&lt;</span><span class="mi">4</span><span class="o">&gt;</span> <span class="n">hs</span><span class="p">(</span><span class="n">self</span><span class="p">);</span>
+  <span class="n">Handle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">ClassLoader</span><span class="o">&gt;</span> <span class="n">h_parent</span><span class="p">(</span><span class="n">hs</span><span class="p">.</span><span class="n">NewHandle</span><span class="p">(</span><span class="n">class_loader</span><span class="o">-&gt;</span><span class="n">GetParent</span><span class="p">()));</span>
+  <span class="kt">bool</span> <span class="n">recursive_result</span> <span class="o">=</span> <span class="n">FindClassInBaseDexClassLoader</span><span class="p">(</span><span class="n">soa</span><span class="p">,</span>
+                                                        <span class="n">self</span><span class="p">,</span>
+                                                        <span class="n">descriptor</span><span class="p">,</span>
+                                                        <span class="n">hash</span><span class="p">,</span>
+                                                        <span class="n">h_parent</span><span class="p">,</span>
+                                                        <span class="n">result</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">recursive_result</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Something wrong up the chain.</span>
+    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div><p>上面可以看到，找parent loader的操作在C++层实现了。</p><p>而Hotspot中，只区分了BootstrapLoader和非BootstrapLoader，根本没有parent loader的设计概念。在触发了非BootstrapLoader的loadClass后，Java层中，才会有找parent Loader的操作，详见ClassLoader.java 源码。</p><h3 id="loadclass触发时机">loadClass触发时机</h3><p>在hotspot中，非BootLoader只要没加载过某个类，就会触发这个Loader的loadClass，从native层走到Java层（之后Java层默认会往上委派）。</p><p>而ART中，会发现大部分的“第一次加载的类”，不会出现在loadClass函数中。</p><p>这是为啥？答案也在class_linker.cc 的FindClassInBaseDexClassLoader中。</p><p>class_linker.cc FindClassInBaseDexClassLoader节选。</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">bool</span> <span class="n">ClassLinker</span><span class="o">::</span><span class="n">FindClassInBaseDexClassLoader</span><span class="p">(</span><span class="n">ScopedObjectAccessAlreadyRunnable</span><span class="o">&amp;</span> <span class="n">soa</span><span class="p">,</span>
+                                                <span class="n">Thread</span><span class="o">*</span> <span class="n">self</span><span class="p">,</span>
+                                                <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">descriptor</span><span class="p">,</span>
+                                                <span class="kt">size_t</span> <span class="n">hash</span><span class="p">,</span>
+                                                <span class="n">Handle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">ClassLoader</span><span class="o">&gt;</span> <span class="n">class_loader</span><span class="p">,</span>
+                                                <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Class</span><span class="o">&gt;*</span> <span class="n">result</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// guanjian......</span>
+  <span class="c1">// Handle this step.</span>
+  <span class="c1">// Handle as if this is the child PathClassLoader.</span>
+  <span class="c1">// The class loader is a PathClassLoader which inherits from BaseDexClassLoader.</span>
+  <span class="c1">// We need to get the DexPathList and loop through it.</span>
+  <span class="n">ArtField</span><span class="o">*</span> <span class="k">const</span> <span class="n">cookie_field</span> <span class="o">=</span>
+      <span class="n">jni</span><span class="o">::</span><span class="n">DecodeArtField</span><span class="p">(</span><span class="n">WellKnownClasses</span><span class="o">::</span><span class="n">dalvik_system_DexFile_cookie</span><span class="p">);</span>
+  <span class="n">ArtField</span><span class="o">*</span> <span class="k">const</span> <span class="n">dex_file_field</span> <span class="o">=</span>
+      <span class="n">jni</span><span class="o">::</span><span class="n">DecodeArtField</span><span class="p">(</span><span class="n">WellKnownClasses</span><span class="o">::</span><span class="n">dalvik_system_DexPathList__Element_dexFile</span><span class="p">);</span>
+  <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">dex_path_list</span> <span class="o">=</span>
+      <span class="n">jni</span><span class="o">::</span><span class="n">DecodeArtField</span><span class="p">(</span><span class="n">WellKnownClasses</span><span class="o">::</span><span class="n">dalvik_system_BaseDexClassLoader_pathList</span><span class="p">)</span><span class="o">-&gt;</span>
+          <span class="n">GetObject</span><span class="p">(</span><span class="n">class_loader</span><span class="p">.</span><span class="n">Get</span><span class="p">());</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">dex_path_list</span> <span class="o">!=</span> <span class="nb">nullptr</span> <span class="o">&amp;&amp;</span> <span class="n">dex_file_field</span> <span class="o">!=</span> <span class="nb">nullptr</span> <span class="o">&amp;&amp;</span> <span class="n">cookie_field</span> <span class="o">!=</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// DexPathList has an array dexElements of Elements[] which each contain a dex file.</span>
+    <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">dex_elements_obj</span> <span class="o">=</span>
+        <span class="n">jni</span><span class="o">::</span><span class="n">DecodeArtField</span><span class="p">(</span><span class="n">WellKnownClasses</span><span class="o">::</span><span class="n">dalvik_system_DexPathList_dexElements</span><span class="p">)</span><span class="o">-&gt;</span>
+        <span class="n">GetObject</span><span class="p">(</span><span class="n">dex_path_list</span><span class="p">);</span>
+    <span class="c1">// Loop through each dalvik.system.DexPathList$Element's dalvik.system.DexFile and look</span>
+    <span class="c1">// at the mCookie which is a DexFile vector.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dex_elements_obj</span> <span class="o">!=</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">Handle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">ObjectArray</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Object</span><span class="o">&gt;&gt;</span> <span class="n">dex_elements</span> <span class="o">=</span>
+          <span class="n">hs</span><span class="p">.</span><span class="n">NewHandle</span><span class="p">(</span><span class="n">dex_elements_obj</span><span class="o">-&gt;</span><span class="n">AsObjectArray</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Object</span><span class="o">&gt;</span><span class="p">());</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kt">int32_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">dex_elements</span><span class="o">-&gt;</span><span class="n">GetLength</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">element</span> <span class="o">=</span> <span class="n">dex_elements</span><span class="o">-&gt;</span><span class="n">GetWithoutChecks</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">element</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+          <span class="c1">// Should never happen, fall back to java code to throw a NPE.</span>
+          <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">dex_file</span> <span class="o">=</span> <span class="n">dex_file_field</span><span class="o">-&gt;</span><span class="n">GetObject</span><span class="p">(</span><span class="n">element</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">dex_file</span> <span class="o">!=</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+          <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">LongArray</span><span class="o">&gt;</span> <span class="n">long_array</span> <span class="o">=</span> <span class="n">cookie_field</span><span class="o">-&gt;</span><span class="n">GetObject</span><span class="p">(</span><span class="n">dex_file</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">AsLongArray</span><span class="p">();</span>
+          <span class="k">if</span> <span class="p">(</span><span class="n">long_array</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// This should never happen so log a warning.</span>
+            <span class="n">LOG</span><span class="p">(</span><span class="n">WARNING</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="s">"Null DexFile::mCookie for "</span> <span class="o">&lt;&lt;</span> <span class="n">descriptor</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+          <span class="p">}</span>
+          <span class="kt">int32_t</span> <span class="n">long_array_size</span> <span class="o">=</span> <span class="n">long_array</span><span class="o">-&gt;</span><span class="n">GetLength</span><span class="p">();</span>
+          <span class="c1">// First element is the oat file.</span>
+          <span class="k">for</span> <span class="p">(</span><span class="kt">int32_t</span> <span class="n">j</span> <span class="o">=</span> <span class="n">kDexFileIndexStart</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">long_array_size</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">const</span> <span class="n">DexFile</span><span class="o">*</span> <span class="n">cp_dex_file</span> <span class="o">=</span> <span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">DexFile</span><span class="o">*&gt;</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uintptr_t</span><span class="o">&gt;</span><span class="p">(</span>
+                <span class="n">long_array</span><span class="o">-&gt;</span><span class="n">GetWithoutChecks</span><span class="p">(</span><span class="n">j</span><span class="p">)));</span>
+            <span class="k">const</span> <span class="n">DexFile</span><span class="o">::</span><span class="n">ClassDef</span><span class="o">*</span> <span class="n">dex_class_def</span> <span class="o">=</span>
+                <span class="n">OatDexFile</span><span class="o">::</span><span class="n">FindClassDef</span><span class="p">(</span><span class="o">*</span><span class="n">cp_dex_file</span><span class="p">,</span> <span class="n">descriptor</span><span class="p">,</span> <span class="n">hash</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">dex_class_def</span> <span class="o">!=</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+              <span class="n">ObjPtr</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Class</span><span class="o">&gt;</span> <span class="n">klass</span> <span class="o">=</span> <span class="n">DefineClass</span><span class="p">(</span><span class="n">self</span><span class="p">,</span>
+                                                 <span class="n">descriptor</span><span class="p">,</span>
+                                                 <span class="n">hash</span><span class="p">,</span>
+                                                 <span class="n">class_loader</span><span class="p">,</span>
+                                                 <span class="o">*</span><span class="n">cp_dex_file</span><span class="p">,</span>
+                                                 <span class="o">*</span><span class="n">dex_class_def</span><span class="p">);</span>
+              <span class="k">if</span> <span class="p">(</span><span class="n">klass</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">CHECK</span><span class="p">(</span><span class="n">self</span><span class="o">-&gt;</span><span class="n">IsExceptionPending</span><span class="p">())</span> <span class="o">&lt;&lt;</span> <span class="n">descriptor</span><span class="p">;</span>
+                <span class="n">self</span><span class="o">-&gt;</span><span class="n">ClearException</span><span class="p">();</span>
+                <span class="c1">// TODO: Is it really right to break here, and not check the other dex files?</span>
+                <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+              <span class="p">}</span>
+              <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="n">klass</span><span class="p">;</span>
+              <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">self</span><span class="o">-&gt;</span><span class="n">AssertNoPendingException</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Result is still null from the parent call, no need to set it again...</span>
+  <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div><p>从上面ART的类加载代码可以看出，某个ClassLoader要加载Class时，不会像hotspot一样，直接触发loadClass交给Java层，而是会搜索这个ClassLoader的所有Dex加载路径下，是否能找到这个Class，能的话，就直接在C++层完成类加载(DefineClass).</p><p>那么，ART的loadClass何时触发，只有在当前加载器和所有parent加载器都无法在各自的Dex搜索路径下加载到这个类时，才会触发Java层loadClass，具体可以去研究class_linker.cc的FindClass。</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">mirror</span><span class="o">::</span><span class="n">Class</span><span class="o">*</span> <span class="n">ClassLinker</span><span class="o">::</span><span class="n">FindClass</span><span class="p">(</span><span class="n">Thread</span><span class="o">*</span> <span class="n">self</span><span class="p">,</span>
+                                      <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">descriptor</span><span class="p">,</span>
+                                      <span class="n">Handle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">ClassLoader</span><span class="o">&gt;</span> <span class="n">class_loader</span><span class="p">);</span>
+</code></pre></div></div><h3 id="dex字节码浅析">Dex字节码浅析</h3><p>详细格式协议可以见Google官方文档： <a href="https://source.android.com/docs/core/runtime/dex-format">Dalvik executable format</a></p><p>这里，我们需要关注的点，就是encoded_method format的code_off。</p><p>encoded_method描述了一个方法，而方法信息（exception、指令等）都在code_off处的code_item内。</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//dex_format_01.png" alt="Picture 1" /></li><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//dex_format_02.png" alt="Picture 1" /></li></ul><p>在DexFile的构造函数中，code_item内容是错误的，不可执行的方法，因为方法内的指令全是0，方法内容是空的，这部分还未还原。</p><p>而类在执行前，方法内容是必须要还原的，因此在DefineClass时，方法内容肯定已经被填充入正确的指令了。</p><p>壳程序是这样做的，在内存中开辟一个区域，存放正确内容的code_item，然后将方法的code_off指向这片内存区域起址，ART在执行方法时就能够找到正确的指令了。</p><p>大致意思如图：</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//jiake_dex_01.png" alt="Picture 1" /></li><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//jiake_dex_02.png" alt="Picture 1" /></li></ul><p>左图，常规情况下，排列是比较整齐的，并且包含指令的code_item都会在Dex内，右图，是被加壳程序倒腾后的，code_item分布在内存各个区域，但由code_off来指向。两者在ART内执行上没区别。</p><p>所以脱壳的一个<strong>重点</strong>，就是收集到内存中所有的code_item，将它拼回Dex，<strong>组装</strong>出完整的Dex再反编译。</p><h3 id="defineclass源码分析">DefineClass源码分析</h3><p>DefineClass是笔者选择的很重要的一个脱壳点。这个函数内，这个类的所有方法指令都被填充，能够获得可以正确执行的类字节码。</p><p>DefineClass将会组装出一个ART内的类定义mirror::Class。</p><p>DefineClass过程会先调用LoadClass，LoadClass会调LoadClassMembers，加载方法内容。</p><p>class_linker.cc LoadClassMembers 节选</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="n">ClassLinker</span><span class="o">::</span><span class="n">LoadClassMembers</span><span class="p">(</span><span class="n">Thread</span><span class="o">*</span> <span class="n">self</span><span class="p">,</span>
+                                   <span class="k">const</span> <span class="n">DexFile</span><span class="o">&amp;</span> <span class="n">dex_file</span><span class="p">,</span>
+                                   <span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">class_data</span><span class="p">,</span>
+                                   <span class="n">Handle</span><span class="o">&lt;</span><span class="n">mirror</span><span class="o">::</span><span class="n">Class</span><span class="o">&gt;</span> <span class="n">klass</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">{</span>
+    <span class="c1">// Load methods.</span>
+    <span class="kt">bool</span> <span class="n">has_oat_class</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="k">const</span> <span class="n">OatFile</span><span class="o">::</span><span class="n">OatClass</span> <span class="n">oat_class</span> <span class="o">=</span>
+        <span class="p">(</span><span class="n">Runtime</span><span class="o">::</span><span class="n">Current</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">IsStarted</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">Runtime</span><span class="o">::</span><span class="n">Current</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">IsAotCompiler</span><span class="p">())</span>
+            <span class="o">?</span> <span class="n">OatFile</span><span class="o">::</span><span class="n">FindOatClass</span><span class="p">(</span><span class="n">dex_file</span><span class="p">,</span> <span class="n">klass</span><span class="o">-&gt;</span><span class="n">GetDexClassDefIndex</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">has_oat_class</span><span class="p">)</span>
+            <span class="o">:</span> <span class="n">OatFile</span><span class="o">::</span><span class="n">OatClass</span><span class="o">::</span><span class="n">Invalid</span><span class="p">();</span>
+    <span class="k">const</span> <span class="n">OatFile</span><span class="o">::</span><span class="n">OatClass</span><span class="o">*</span> <span class="n">oat_class_ptr</span> <span class="o">=</span> <span class="n">has_oat_class</span> <span class="o">?</span> <span class="o">&amp;</span><span class="n">oat_class</span> <span class="o">:</span> <span class="nb">nullptr</span><span class="p">;</span>
+    <span class="n">klass</span><span class="o">-&gt;</span><span class="n">SetMethodsPtr</span><span class="p">(</span>
+        <span class="n">AllocArtMethodArray</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">allocator</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">NumDirectMethods</span><span class="p">()</span> <span class="o">+</span> <span class="n">it</span><span class="p">.</span><span class="n">NumVirtualMethods</span><span class="p">()),</span>
+        <span class="n">it</span><span class="p">.</span><span class="n">NumDirectMethods</span><span class="p">(),</span>
+        <span class="n">it</span><span class="p">.</span><span class="n">NumVirtualMethods</span><span class="p">());</span>
+    <span class="kt">size_t</span> <span class="n">class_def_method_index</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint32_t</span> <span class="n">last_dex_method_index</span> <span class="o">=</span> <span class="n">DexFile</span><span class="o">::</span><span class="n">kDexNoIndex</span><span class="p">;</span>
+    <span class="kt">size_t</span> <span class="n">last_class_def_method_index</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="c1">// TODO These should really use the iterators.</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">it</span><span class="p">.</span><span class="n">HasNextDirectMethod</span><span class="p">();</span> <span class="n">i</span><span class="o">++</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">Next</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">ArtMethod</span><span class="o">*</span> <span class="n">method</span> <span class="o">=</span> <span class="n">klass</span><span class="o">-&gt;</span><span class="n">GetDirectMethodUnchecked</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">image_pointer_size_</span><span class="p">);</span>
+      <span class="n">LoadMethod</span><span class="p">(</span><span class="n">dex_file</span><span class="p">,</span> <span class="n">it</span><span class="p">,</span> <span class="n">klass</span><span class="p">,</span> <span class="n">method</span><span class="p">);</span>
+      <span class="n">LinkCode</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">oat_class_ptr</span><span class="p">,</span> <span class="n">class_def_method_index</span><span class="p">);</span>
+      <span class="kt">uint32_t</span> <span class="n">it_method_index</span> <span class="o">=</span> <span class="n">it</span><span class="p">.</span><span class="n">GetMemberIndex</span><span class="p">();</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">last_dex_method_index</span> <span class="o">==</span> <span class="n">it_method_index</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// duplicate case</span>
+        <span class="n">method</span><span class="o">-&gt;</span><span class="n">SetMethodIndex</span><span class="p">(</span><span class="n">last_class_def_method_index</span><span class="p">);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">method</span><span class="o">-&gt;</span><span class="n">SetMethodIndex</span><span class="p">(</span><span class="n">class_def_method_index</span><span class="p">);</span>
+        <span class="n">last_dex_method_index</span> <span class="o">=</span> <span class="n">it_method_index</span><span class="p">;</span>
+        <span class="n">last_class_def_method_index</span> <span class="o">=</span> <span class="n">class_def_method_index</span><span class="p">;</span>
+      <span class="p">}</span>
+      <span class="n">class_def_method_index</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">it</span><span class="p">.</span><span class="n">HasNextVirtualMethod</span><span class="p">();</span> <span class="n">i</span><span class="o">++</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">Next</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">ArtMethod</span><span class="o">*</span> <span class="n">method</span> <span class="o">=</span> <span class="n">klass</span><span class="o">-&gt;</span><span class="n">GetVirtualMethodUnchecked</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">image_pointer_size_</span><span class="p">);</span>
+      <span class="n">LoadMethod</span><span class="p">(</span><span class="n">dex_file</span><span class="p">,</span> <span class="n">it</span><span class="p">,</span> <span class="n">klass</span><span class="p">,</span> <span class="n">method</span><span class="p">);</span>
+      <span class="n">DCHECK_EQ</span><span class="p">(</span><span class="n">class_def_method_index</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">NumDirectMethods</span><span class="p">()</span> <span class="o">+</span> <span class="n">i</span><span class="p">);</span>
+      <span class="n">LinkCode</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">oat_class_ptr</span><span class="p">,</span> <span class="n">class_def_method_index</span><span class="p">);</span>
+      <span class="n">class_def_method_index</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">DCHECK</span><span class="p">(</span><span class="o">!</span><span class="n">it</span><span class="p">.</span><span class="n">HasNext</span><span class="p">());</span>
+  <span class="p">}</span>
+  <span class="c1">// Ensure that the card is marked so that remembered sets pick up native roots.</span>
+  <span class="n">Runtime</span><span class="o">::</span><span class="n">Current</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">GetHeap</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">WriteBarrierEveryFieldOf</span><span class="p">(</span><span class="n">klass</span><span class="p">.</span><span class="n">Get</span><span class="p">());</span>
+  <span class="n">self</span><span class="o">-&gt;</span><span class="n">AllowThreadSuspension</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div><p>从Dex中加载方法内容。经笔者观察此时的字节码已经是正常的内容了。因为这个类Define完就要执行了，不能再拖了。</p><p>所以，在这个地方通过枚举这个类的所有Method，可以找到所有正确的，分布在内存各个地方的code_item。</p><p>至于加壳程序是在什么时候把原始code_item放到内存的，这个就不知道了。或许是hook了这之前的某个ART的方法把。</p><h1 id="开始脱壳">开始脱壳</h1><p>介绍了，核心原理，就可以开始脱壳了。</p><p>整体架构：</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//tuoke.png" alt="Picture 1" /></li></ul><p>脱壳流程:</p><ol><li><p>修改ART虚拟机代码，在DexFile构造函数处，将整个DexFile在内存的结构通过socket发送给计算机的socketServer。</p></li><li><p>修改ART虚拟机代码，在DefineClass的后期，遍历所有方法，将方法数据code_item发送给计算机。</p></li><li><p>收集到了所有的DexFile和code_item，在计算机写一个脚本，根据谷歌规定的DexFile Format将其进行拼装，拼装出完整的DexFile</p></li><li><p>对DexFile反编译，拿到程序源码。</p></li></ol><p></p><p></p><p>那么每个技术点，逐个过一遍。</p><h2 id="socketserver">SocketServer</h2><p>计算机运行，等待安卓机内的应用建立socket连接，将内存数据发出。</p><p>写的有点挫，懒得改了。</p><div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">thread</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+
+<span class="c1"># 静态
+</span><span class="n">mtdMap</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">mtdMapLock</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="n">Lock</span><span class="p">()</span>
+<span class="n">mtdIdx</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">class</span> <span class="nc">Solver</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span> <span class="o">=</span> <span class="sa">b</span><span class="s">''</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">_finish</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="bp">self</span><span class="p">.</span><span class="n">calcLen</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">newMsg</span><span class="p">):</span>
+        <span class="k">if</span><span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">):</span> <span class="c1"># 第一次收到
+</span>            <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span> <span class="o">=</span> <span class="n">newMsg</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span> <span class="o">+=</span> <span class="n">newMsg</span>
+
+        <span class="bp">self</span><span class="p">.</span><span class="n">solve</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="p">.</span><span class="n">_finish</span>
+
+    <span class="k">def</span> <span class="nf">extractInt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="p">):</span>
+            <span class="n">msgLen</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">24</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">msgLen</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+
+
+    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="p">.</span><span class="n">calcLen</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">_l</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">extractInt</span><span class="p">()</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">_l</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="bp">self</span><span class="p">.</span><span class="n">calcLen</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="bp">self</span><span class="p">.</span><span class="n">msgLen</span> <span class="o">=</span> <span class="n">_l</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="p">.</span><span class="n">calcLen</span><span class="p">:</span>
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgLen</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">)):</span> <span class="c1"># 接收完毕
+</span>                <span class="bp">self</span><span class="p">.</span><span class="n">done</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">msgRcv</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">extractStr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fMsg</span><span class="p">):</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span><span class="p">(</span><span class="n">fMsg</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span> <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">retMsg</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">fMsg</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">retMsg</span> <span class="o">=</span> <span class="n">retMsg</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'ascii'</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"decode error  "</span> <span class="o">+</span> <span class="n">retMsg</span><span class="p">)</span>
+            <span class="n">retMsg</span> <span class="o">=</span> <span class="n">retMsg</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'ascii'</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">retMsg</span><span class="p">,</span> <span class="n">fMsg</span>
+
+
+    <span class="k">def</span> <span class="nf">extractInt2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fMsg</span><span class="p">):</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="n">fMsg</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">24</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">fMsg</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">fMsg</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="n">fMsg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">fMsg</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="n">fMsg</span>
+
+
+    <span class="k">def</span> <span class="nf">parseDesc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">desc</span><span class="p">):</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">desc</span><span class="p">.</span><span class="n">index</span><span class="p">(</span><span class="s">"_"</span><span class="p">)</span>
+        <span class="n">dexSz</span> <span class="o">=</span> <span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">fn</span> <span class="o">=</span> <span class="n">desc</span><span class="p">[</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">dexSz</span><span class="p">,</span> <span class="n">fn</span>
+
+    <span class="k">def</span> <span class="nf">done</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fMsg</span><span class="p">):</span>
+        <span class="k">global</span> <span class="n">mtdIdx</span>
+
+        <span class="n">connType</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">fMsg</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">connType</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># DexFile
+</span>            <span class="k">print</span><span class="p">(</span><span class="s">"done: "</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">fMsg</span><span class="p">))</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">"wepie/dex/"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fMsg</span><span class="p">))</span> <span class="o">+</span> <span class="s">"_"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">10000</span><span class="p">))</span> <span class="o">+</span> <span class="s">".dex"</span><span class="p">,</span> <span class="s">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">_f</span><span class="p">:</span>
+                <span class="n">_f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">fMsg</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">connType</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># MethodCodeItem
+</span>            <span class="c1">#print("DDDDD")
+</span>            <span class="n">msgNum</span><span class="p">,</span> <span class="n">fMsg</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">extractInt2</span><span class="p">(</span><span class="n">fMsg</span><span class="p">)</span>
+
+            <span class="n">realNum</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fMsg</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="n">realNum</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">tLen</span><span class="p">,</span> <span class="n">fMsg</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">extractInt2</span><span class="p">(</span><span class="n">fMsg</span><span class="p">)</span>
+
+                <span class="n">desc</span><span class="p">,</span> <span class="n">fMsg</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">extractStr</span><span class="p">(</span><span class="n">fMsg</span><span class="p">)</span>
+                <span class="n">mtdConts</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[:</span><span class="n">tLen</span><span class="p">]</span>
+                <span class="n">fMsg</span> <span class="o">=</span> <span class="n">fMsg</span><span class="p">[</span><span class="n">tLen</span><span class="p">:]</span>
+
+                <span class="n">dexSz</span><span class="p">,</span> <span class="n">fn</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">parseDesc</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
+                <span class="n">hashfn</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="n">fn</span><span class="p">))</span>
+                <span class="n">folder</span> <span class="o">=</span> <span class="s">"wepie/mtd/"</span> <span class="o">+</span> <span class="n">dexSz</span>
+                <span class="k">if</span><span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">exists</span><span class="p">(</span><span class="n">folder</span><span class="p">)):</span> <span class="n">os</span><span class="p">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+                
+                <span class="c1"># check key
+</span>                <span class="n">gotKey</span> <span class="o">=</span> <span class="bp">False</span>
+
+                <span class="n">_key</span> <span class="o">=</span> <span class="n">dexSz</span> <span class="o">+</span> <span class="s">'_'</span> <span class="o">+</span> <span class="n">fn</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">_key</span> <span class="ow">in</span> <span class="n">mtdMap</span><span class="p">:</span>
+                    <span class="n">mtdMapLock</span><span class="p">.</span><span class="n">acquire</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_key</span> <span class="ow">in</span> <span class="n">mtdMap</span><span class="p">:</span>
+                        <span class="n">mtdMap</span><span class="p">[</span><span class="n">_key</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                        <span class="c1"># hashfn = str(mtdIdx)
+</span>                        <span class="c1"># mtdIdx += 1
+</span>                        <span class="n">gotKey</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="n">mtdMapLock</span><span class="p">.</span><span class="n">release</span><span class="p">()</span>
+
+                <span class="c1"># print("DDD", gotKey, _key)
+</span>                <span class="k">if</span> <span class="n">gotKey</span><span class="p">:</span>
+                    <span class="n">absPath</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">hashfn</span> <span class="o">+</span> <span class="s">".bin"</span><span class="p">)</span>
+                    <span class="n">descPath</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">hashfn</span> <span class="o">+</span> <span class="s">".desc"</span><span class="p">)</span>
+                    <span class="c1"># absPath = os.path.join(folder, str(random.randint(1,10000)) + "_" + fn)
+</span>                    <span class="c1"># print("done : ", desc, absPath)
+</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">absPath</span><span class="p">,</span> <span class="s">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">_f</span><span class="p">:</span>
+                            <span class="n">_f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">mtdConts</span><span class="p">)</span>
+
+                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">descPath</span><span class="p">,</span> <span class="s">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">_f</span><span class="p">:</span>
+                            <span class="n">_f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+
+                        <span class="c1">#print(fn)
+</span>                    <span class="k">except</span><span class="p">:</span>
+                        <span class="k">print</span><span class="p">(</span><span class="s">"file name too long ?"</span><span class="p">)</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">realNum</span> <span class="o">==</span> <span class="n">msgNum</span><span class="p">):</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">"ok ... "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">msgNum</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">"what ... "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">msgNum</span><span class="p">)</span> <span class="o">+</span> <span class="s">" "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">realNum</span><span class="p">))</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">"finish ..."</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">_finish</span> <span class="o">=</span> <span class="bp">True</span>
+
+
+
+
+<span class="k">def</span> <span class="nf">on_new_client</span><span class="p">(</span><span class="n">clientsocket</span><span class="p">,</span> <span class="n">addr</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"new client ! "</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
+
+    <span class="n">solver</span> <span class="o">=</span> <span class="n">Solver</span><span class="p">()</span>
+    <span class="k">while</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">clientsocket</span><span class="p">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">solver</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+
+            <span class="k">if</span><span class="p">(</span><span class="n">res</span><span class="p">):</span>
+                <span class="n">clientsocket</span><span class="p">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">break</span>
+
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">socket</span><span class="p">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="p">.</span><span class="n">AF_INET</span><span class="p">,</span><span class="n">socket</span><span class="p">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+<span class="n">server</span><span class="p">.</span><span class="n">bind</span><span class="p">((</span><span class="s">'192.168.0.107'</span><span class="p">,</span><span class="mi">12345</span><span class="p">))</span> 
+<span class="n">server</span><span class="p">.</span><span class="n">listen</span><span class="p">(</span><span class="mi">300</span><span class="p">)</span> 
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">conn</span><span class="p">,</span><span class="n">addr</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">accept</span><span class="p">()</span> 
+    <span class="n">thread</span><span class="p">.</span><span class="n">start_new_thread</span><span class="p">(</span><span class="n">on_new_client</span><span class="p">,</span> <span class="p">(</span><span class="n">conn</span><span class="p">,</span><span class="n">addr</span><span class="p">))</span>
+
+</code></pre></div></div><h2 id="art修改">ART修改</h2><blockquote><p>socket连接宏</p></blockquote><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="cp">#define S_IP "192.168.0.107"
+</span>
+<span class="cp">#define SOCKS_INIT int sock = 0, client_fd; \
+struct sockaddr_in serv_addr; \
+if ((sock = socket(AF_INET, SOCK_STREAM, 0)) &lt; 0) { \
+printf("\n Socket creation error \n"); \
+return -1; \
+} \
+serv_addr.sin_family = AF_INET; \
+serv_addr.sin_port = htons(12345); \
+if (inet_pton(AF_INET, S_IP, &amp;serv_addr.sin_addr) &lt;= 0) { \
+printf( \
+"\nInvalid address/ Address not supported \n"); \
+return -1; \
+} \
+if ((client_fd = connect(sock, (struct sockaddr*)&amp;serv_addr, sizeof(serv_addr))) &lt; 0) { \
+printf("\nConnection Failed \n"); \
+return -1; \
+} \
+
+#define SOCKS_INIT2 int sock = 0, client_fd; \
+struct sockaddr_in serv_addr; \
+if ((sock = socket(AF_INET, SOCK_STREAM, 0)) &lt; 0) { \
+printf("\n Socket creation error \n"); \
+return 0; \
+} \
+serv_addr.sin_family = AF_INET; \
+serv_addr.sin_port = htons(12345); \
+if (inet_pton(AF_INET, S_IP, &amp;serv_addr.sin_addr) &lt;= 0) { \
+printf( \
+"\nInvalid address/ Address not supported \n"); \
+return 0; \
+} \
+if ((client_fd = connect(sock, (struct sockaddr*)&amp;serv_addr, sizeof(serv_addr))) &lt; 0) { \
+printf("\nConnection Failed \n"); \
+return 0; \
+} \
+
+#define SOCKS_INT_TO_UC(x) (unsigned char) (x &amp; 0xff), \
+(unsigned char) ((x &gt;&gt; 8) &amp; 0xff), \
+(unsigned char) ((x &gt;&gt; 16) &amp; 0xff), \
+(unsigned char) ((x &gt;&gt; 24) &amp; 0xff) \
+
+</span></code></pre></div></div><blockquote><p>DexFile构造函数</p></blockquote><p>省略，就将 base到base+size这片内存数据发出。</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DexFile</span><span class="o">::</span><span class="n">DexFile</span><span class="p">(</span>  <span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">base</span><span class="p">,</span>
+                 <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span>
+                 <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">location</span><span class="p">,</span>
+                 <span class="kt">uint32_t</span> <span class="n">location_checksum</span><span class="p">,</span>
+                 <span class="k">const</span> <span class="n">OatDexFile</span><span class="o">*</span> <span class="n">oat_dex_file</span><span class="p">)</span>
+</code></pre></div></div><blockquote><p>DefineClass取出code_item</p></blockquote><p>这里包括遍历DirectMethod和VirtualMethod，代码相似，以VirtualMethod为例。</p><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">method_index</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">zcx_it</span><span class="p">.</span><span class="n">HasNextVirtualMethod</span><span class="p">();</span> <span class="o">++</span><span class="n">method_index</span><span class="p">,</span> <span class="n">zcx_it</span><span class="p">.</span><span class="n">Next</span><span class="p">())</span> <span class="p">{</span>
+            <span class="n">ArtMethod</span> <span class="o">*</span><span class="n">zcx_method</span> <span class="o">=</span> <span class="n">h_new_class</span><span class="o">-&gt;</span><span class="n">GetVirtualMethodUnchecked</span><span class="p">(</span><span class="n">method_index</span><span class="p">,</span> <span class="n">image_pointer_size_</span><span class="p">);</span>
+            <span class="kt">uint32_t</span> <span class="n">zcx_dex_method_idx</span> <span class="o">=</span> <span class="n">zcx_it</span><span class="p">.</span><span class="n">GetMemberIndex</span><span class="p">();</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">zcx_method</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">){</span>
+                <span class="k">continue</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">const</span> <span class="n">DexFile</span><span class="o">::</span><span class="n">MethodId</span> <span class="o">&amp;</span><span class="n">zcx_method_id</span> <span class="o">=</span> <span class="n">zcx_dex_file</span><span class="p">.</span><span class="n">GetMethodId</span><span class="p">(</span><span class="n">zcx_dex_method_idx</span><span class="p">);</span>
+
+            <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">zcx_method_name</span> <span class="o">=</span> <span class="n">zcx_dex_file</span><span class="p">.</span><span class="n">StringDataByIdx</span><span class="p">(</span><span class="n">zcx_method_id</span><span class="p">.</span><span class="n">name_idx_</span><span class="p">);</span>
+            <span class="k">const</span> <span class="n">DexFile</span><span class="o">::</span><span class="n">CodeItem</span><span class="o">*</span> <span class="n">zcxCodeItem</span> <span class="o">=</span> <span class="n">zcx_method</span><span class="o">-&gt;</span><span class="n">GetCodeItem</span><span class="p">();</span>
+
+            <span class="k">if</span><span class="p">(</span><span class="n">zcxCodeItem</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">){</span>
+                <span class="k">continue</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="n">sprintf</span><span class="p">(</span><span class="n">zcxFp</span><span class="p">,</span> <span class="s">"%d_%s_%s_%s.o"</span><span class="p">,</span> <span class="n">dexFileSz</span><span class="p">,</span> <span class="n">descriptor</span><span class="p">,</span> <span class="n">zcx_method_name</span><span class="p">,</span>
+                    <span class="n">new_dex_file</span><span class="o">-&gt;</span><span class="n">GetMethodSignature</span><span class="p">(</span><span class="n">zcx_method_id</span><span class="p">).</span><span class="n">ToString</span><span class="p">().</span><span class="n">c_str</span><span class="p">());</span>
+
+            <span class="kt">int</span> <span class="n">fpLen</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">zcxFp</span><span class="p">);</span>
+            <span class="kt">char</span> <span class="o">*</span><span class="n">desc</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="p">[</span><span class="n">fpLen</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+            <span class="n">memcpy</span><span class="p">(</span><span class="n">desc</span><span class="p">,</span> <span class="n">zcxFp</span><span class="p">,</span> <span class="n">fpLen</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+
+            <span class="n">MsgCont</span> <span class="o">*</span><span class="n">msgCont</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MsgCont</span><span class="p">();</span>
+            <span class="n">msgCont</span><span class="o">-&gt;</span><span class="n">desc</span> <span class="o">=</span> <span class="n">desc</span><span class="p">;</span>
+            <span class="n">msgCont</span><span class="o">-&gt;</span><span class="n">codeItemBegin</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span> <span class="n">zcxCodeItem</span><span class="p">;</span>
+            <span class="n">msgCont</span><span class="o">-&gt;</span><span class="n">codeItemLen</span> <span class="o">=</span> <span class="n">zcxGetCodeItemSize</span><span class="p">(</span><span class="o">*</span><span class="n">zcxCodeItem</span><span class="p">);</span>
+
+            <span class="n">conts</span><span class="p">[</span><span class="n">contsNum</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">msgCont</span><span class="p">;</span>
+        <span class="p">}</span>
+</code></pre></div></div><p>可以看到，codeItemBegin codeItemLen就记录了这个code_item在内存中的位置，我想将其保存，而后会开一个子线程去发送给计算机。</p><blockquote><p>子线程发送内存数据</p></blockquote><div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">bool</span> <span class="n">sendOutStart</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">sendOutThread</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">p</span><span class="o">==</span><span class="mi">0</span><span class="p">){</span>
+
+    <span class="p">}</span>
+    <span class="n">sleep</span><span class="p">(</span><span class="mi">60</span> <span class="o">*</span> <span class="mi">10</span><span class="p">);</span>
+
+    <span class="n">needsLock</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">LOG</span><span class="p">(</span><span class="n">WARNING</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="s">"sendOutThread start......"</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">lstContsNum</span> <span class="o">=</span> <span class="n">contsNum</span><span class="p">;</span>
+
+    <span class="n">SubTParam</span> <span class="o">*</span><span class="n">tParam</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SubTParam</span><span class="p">;</span>
+    <span class="n">tParam</span><span class="o">-&gt;</span><span class="n">contsNum</span> <span class="o">=</span> <span class="n">lstContsNum</span><span class="p">;</span>
+    <span class="n">tParam</span><span class="o">-&gt;</span><span class="n">conts</span> <span class="o">=</span> <span class="n">conts</span><span class="p">;</span>
+    <span class="n">sendAMsg_code</span><span class="p">(</span><span class="n">tParam</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div><p>先收集，10分钟后，将所有收集到的在这个子线程中发送个计算机。</p><p>不能直接在类加载的那个线程直接发，不然会玩应用会反复重启，可能是检测了某个过程的执行时间，超时就会重试把。</p><h2 id="操作系统编译">操作系统编译</h2><p>修改了ART后，对修改过的AOSP（Android Open Source Project）进行编译，编译出系统镜像img。然后将镜像烧录到真机，笔者选择Nexus6P。</p><p>这时，真机上运行的就是我们定制过后的操作系统了，用它启动会玩APP。我们的定制版ART虚拟机就会将内存关键数据发送到计算机了。</p><h2 id="拼装dex">拼装Dex</h2><p>上一步，收到了所有的DexFile和code_item。看起来长这样：</p><p>接下来我们就要开始把他们拼装成完整的Dex了。</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//pinzhuang_01.png" alt="Picture 1" /></li><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//pinzhuang_02.png" alt="Picture 1" /></li><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//pinzhuang_03.png" alt="Picture 1" /></li></ul><p>图1是所有的DexFile，图2是某个DexFile的所有code_item（方法内容），图三也是某个DexFile的所有code_item。</p><p>一个DexFile会对应N个code_item，我们需要将其组装起来，把code_item塞回DexFile中，再导出塞完以后的DexFile。</p><p>开始拼装。。。。。。。</p><p>我拼装的思路是，将所有的code_item直接堆到这个DexFile的尾部，然后遍历所有的Method，将code_off指向尾部对应的code_item处。（模仿一把加壳程序，利用Dex规范）</p><p>有个<strong>要注意</strong>的地方是！code_item的insns指令那里，是有<strong>4字节对齐</strong>的！！！ 开始时，我没注意到谷歌官网上的这句话，卡了一会儿，对着内存数据看，才发现，有4字节对齐的要求。。。（下图的padding）。</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//pinzhuang_11.png" alt="Picture 1" /></li></ul><p>Dex解析程序用这个工具dexlib2.</p><pre><code class="language-pom">&lt;dependency&gt;
+    &lt;groupId&gt;org.smali&lt;/groupId&gt;
+    &lt;artifactId&gt;dexlib2&lt;/artifactId&gt;
+    &lt;version&gt;2.5.2&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre><p>组装程序：</p><div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">A</span> <span class="o">{</span>
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">MyMethodImpl</span> <span class="kd">extends</span> <span class="nc">DexBackedMethodImplementation</span> <span class="o">{</span>
+        <span class="kd">public</span> <span class="nf">MyMethodImpl</span><span class="o">(</span><span class="nd">@Nonnull</span> <span class="nc">DexBackedDexFile</span> <span class="n">dexFile</span><span class="o">,</span> <span class="nd">@Nonnull</span> <span class="nc">DexBackedMethod</span> <span class="n">method</span><span class="o">,</span> <span class="kt">int</span> <span class="n">codeOffset</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kd">super</span><span class="o">(</span><span class="n">dexFile</span><span class="o">,</span> <span class="n">method</span><span class="o">,</span> <span class="n">codeOffset</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="nc">String</span> <span class="no">DEX_ID</span> <span class="o">=</span> <span class="s">"9633516"</span><span class="o">;</span>
+    <span class="kd">static</span> <span class="nc">String</span> <span class="no">DEX_FULL_NAME</span> <span class="o">=</span> <span class="s">"9633516_5918"</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">String</span> <span class="no">MTD_PATH</span> <span class="o">=</span> <span class="s">"/home/zhou/PROJECTS/tmp/socks/wepie/mtd"</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">String</span> <span class="no">DEX_PATH</span> <span class="o">=</span> <span class="s">"/home/zhou/PROJECTS/tmp/socks/wepie/dex"</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">String</span> <span class="no">DEX_OUT_PATH</span> <span class="o">=</span> <span class="s">"/home/zhou/PROJECTS/tmp/socks/wepie/dex_out"</span><span class="o">;</span>
+
+
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">MtdInfo</span> <span class="o">{</span>
+        <span class="kt">byte</span><span class="o">[]</span> <span class="n">cont</span><span class="o">;</span>
+        <span class="nc">String</span> <span class="n">fn</span><span class="o">;</span>
+
+        <span class="kd">public</span> <span class="nf">MtdInfo</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">cont</span><span class="o">,</span> <span class="nc">String</span> <span class="n">fn</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">cont</span> <span class="o">=</span> <span class="n">cont</span><span class="o">;</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">fn</span> <span class="o">=</span> <span class="n">fn</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="nc">MtdInfo</span><span class="o">[]</span> <span class="nf">readMtds</span><span class="o">(</span><span class="nc">File</span><span class="o">[]</span> <span class="n">files</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+        <span class="nc">MtdInfo</span><span class="o">[]</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MtdInfo</span><span class="o">[</span><span class="n">files</span><span class="o">.</span><span class="na">length</span> <span class="o">/</span> <span class="mi">2</span><span class="o">];</span>
+        <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">files</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="o">++</span><span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">File</span> <span class="n">f</span> <span class="o">=</span> <span class="n">files</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">f</span><span class="o">.</span><span class="na">getName</span><span class="o">().</span><span class="na">endsWith</span><span class="o">(</span><span class="s">".bin"</span><span class="o">))</span> <span class="o">{</span>
+                <span class="kt">byte</span><span class="o">[]</span> <span class="n">b</span> <span class="o">=</span> <span class="n">read</span><span class="o">(</span><span class="n">f</span><span class="o">.</span><span class="na">getAbsolutePath</span><span class="o">());</span>
+
+                <span class="nc">String</span> <span class="n">descFp</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="na">getAbsolutePath</span><span class="o">().</span><span class="na">replace</span><span class="o">(</span><span class="s">".bin"</span><span class="o">,</span> <span class="s">".desc"</span><span class="o">);</span>
+                <span class="nc">String</span> <span class="n">fnDesc</span> <span class="o">=</span> <span class="n">getFileCont</span><span class="o">(</span><span class="n">descFp</span><span class="o">);</span>
+
+                <span class="n">res</span><span class="o">[</span><span class="n">num</span><span class="o">++]</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MtdInfo</span><span class="o">(</span><span class="n">b</span><span class="o">,</span> <span class="n">fnDesc</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">getFileCont</span><span class="o">(</span><span class="nc">String</span> <span class="n">fp</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+        <span class="nc">BufferedReader</span> <span class="n">br</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">BufferedReader</span><span class="o">(</span><span class="k">new</span> <span class="nc">InputStreamReader</span><span class="o">(</span><span class="k">new</span> <span class="nc">FileInputStream</span><span class="o">(</span><span class="n">fp</span><span class="o">)));</span>
+        <span class="nc">String</span> <span class="n">res</span> <span class="o">=</span> <span class="s">""</span><span class="o">,</span> <span class="n">line</span> <span class="o">=</span> <span class="s">""</span><span class="o">;</span>
+        <span class="k">while</span> <span class="o">((</span><span class="n">line</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="na">readLine</span><span class="o">())</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="n">line</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+
+        <span class="nc">File</span> <span class="n">f</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="no">MTD_PATH</span> <span class="o">+</span> <span class="s">"/%s"</span><span class="o">,</span> <span class="no">DEX_ID</span><span class="o">));</span>
+        <span class="nc">MtdInfo</span><span class="o">[]</span> <span class="n">mtdInfos</span> <span class="o">=</span> <span class="n">readMtds</span><span class="o">(</span><span class="n">f</span><span class="o">.</span><span class="na">listFiles</span><span class="o">());</span>
+
+        <span class="kt">byte</span><span class="o">[]</span> <span class="n">originalBytes</span> <span class="o">=</span> <span class="n">read</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="no">DEX_PATH</span> <span class="o">+</span> <span class="s">"/%s.dex"</span><span class="o">,</span> <span class="no">DEX_FULL_NAME</span><span class="o">));</span>
+        <span class="kt">int</span> <span class="n">totalLen</span> <span class="o">=</span> <span class="n">originalBytes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+
+
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">mtdInfos</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="o">++</span><span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+
+            <span class="kt">byte</span><span class="o">[]</span> <span class="n">b</span> <span class="o">=</span> <span class="n">mtdInfos</span><span class="o">[</span><span class="n">i</span><span class="o">].</span><span class="na">cont</span><span class="o">;</span>
+
+            <span class="c1">// 4bytes对齐</span>
+            <span class="n">totalLen</span> <span class="o">+=</span> <span class="n">alignLeft</span><span class="o">(</span><span class="n">totalLen</span><span class="o">);</span>
+
+            <span class="n">totalLen</span> <span class="o">+=</span> <span class="n">b</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+        <span class="o">}</span>
+
+        <span class="n">dexBytes</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">totalLen</span><span class="o">];</span>
+
+        <span class="kt">int</span> <span class="n">dbOff</span> <span class="o">=</span> <span class="n">originalBytes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">dbOff</span><span class="o">;</span> <span class="o">++</span><span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">dexBytes</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="n">originalBytes</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+        <span class="o">}</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">mtdInfos</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="o">++</span><span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">filename</span> <span class="o">=</span> <span class="n">mtdInfos</span><span class="o">[</span><span class="n">i</span><span class="o">].</span><span class="na">fn</span><span class="o">;</span>
+
+            <span class="kt">int</span> <span class="n">alignLeft</span> <span class="o">=</span> <span class="n">alignLeft</span><span class="o">(</span><span class="n">dbOff</span><span class="o">);</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">alignLeft</span><span class="o">;</span> <span class="o">++</span><span class="n">j</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">dexBytes</span><span class="o">[</span><span class="n">dbOff</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+                <span class="n">dbOff</span><span class="o">++;</span>
+            <span class="o">}</span>
+
+            <span class="n">offsets</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">filename</span><span class="o">,</span> <span class="n">dbOff</span><span class="o">);</span>
+
+            <span class="kt">byte</span><span class="o">[]</span> <span class="n">b</span> <span class="o">=</span> <span class="n">mtdInfos</span><span class="o">[</span><span class="n">i</span><span class="o">].</span><span class="na">cont</span><span class="o">;</span>
+            <span class="n">formatAddrInB</span><span class="o">(</span><span class="n">dbOff</span><span class="o">,</span> <span class="n">b</span><span class="o">);</span>
+<span class="c1">//            formatB(b);</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">b</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="o">++</span><span class="n">j</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">dexBytes</span><span class="o">[</span><span class="n">dbOff</span><span class="o">]</span> <span class="o">=</span> <span class="n">b</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
+                <span class="n">dbOff</span><span class="o">++;</span>
+            <span class="o">}</span>
+
+        <span class="o">}</span>
+        <span class="k">assert</span> <span class="n">dbOff</span> <span class="o">==</span> <span class="n">dexBytes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">alignLeft</span><span class="o">(</span><span class="kt">int</span> <span class="n">cur</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">m</span> <span class="o">=</span> <span class="n">cur</span> <span class="o">%</span> <span class="mi">4</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">m</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="k">return</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="k">return</span> <span class="mi">4</span> <span class="o">-</span> <span class="n">m</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">formatAddrInB</span><span class="o">(</span><span class="kt">int</span> <span class="n">codeItemAddr</span><span class="o">,</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">b</span><span class="o">[</span><span class="mi">8</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">b</span><span class="o">[</span><span class="mi">9</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">b</span><span class="o">[</span><span class="mi">10</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">b</span><span class="o">[</span><span class="mi">11</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="o">}</span>
+
+
+    <span class="kd">static</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">dexBytes</span><span class="o">;</span>
+    <span class="kd">static</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Integer</span><span class="o">&gt;</span> <span class="n">offsets</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+
+    <span class="kd">static</span> <span class="nc">String</span> <span class="nf">gettransName</span><span class="o">(</span><span class="nc">String</span> <span class="n">className</span><span class="o">,</span> <span class="nc">String</span> <span class="n">methodName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">sig</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">className</span> <span class="o">+</span> <span class="s">"_"</span> <span class="o">+</span> <span class="n">methodName</span> <span class="o">+</span> <span class="s">"_"</span> <span class="o">+</span> <span class="n">sig</span> <span class="o">+</span> <span class="s">".o"</span><span class="o">;</span>
+        <span class="k">return</span> <span class="n">n</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">getAllFiles</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nc">File</span> <span class="n">f</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="no">MTD_PATH</span><span class="o">);</span>
+
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">File</span> <span class="n">__f</span> <span class="o">:</span> <span class="n">f</span><span class="o">.</span><span class="na">listFiles</span><span class="o">())</span> <span class="o">{</span>
+            <span class="n">res</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">__f</span><span class="o">.</span><span class="na">getName</span><span class="o">());</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">getDexFullName</span><span class="o">(</span><span class="nc">String</span> <span class="n">sz</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">File</span> <span class="n">f</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="no">DEX_PATH</span><span class="o">);</span>
+
+        <span class="k">for</span> <span class="o">(</span><span class="nc">File</span> <span class="n">__f</span> <span class="o">:</span> <span class="n">f</span><span class="o">.</span><span class="na">listFiles</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">name</span> <span class="o">=</span> <span class="n">__f</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">name</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">"_"</span><span class="o">)[</span><span class="mi">0</span><span class="o">].</span><span class="na">equals</span><span class="o">(</span><span class="n">sz</span><span class="o">))</span> <span class="o">{</span>
+                <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">"\\."</span><span class="o">)[</span><span class="mi">0</span><span class="o">];</span>
+            <span class="o">}</span>
+            <span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span><span class="o">,</span> <span class="nc">NoSuchMethodException</span> <span class="o">{</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">files</span> <span class="o">=</span> <span class="n">getAllFiles</span><span class="o">();</span>
+
+        <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">sz</span> <span class="o">:</span> <span class="n">files</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">dexFullName</span> <span class="o">=</span> <span class="n">getDexFullName</span><span class="o">(</span><span class="n">sz</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">dexFullName</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">continue</span><span class="o">;</span>
+
+            <span class="no">DEX_ID</span> <span class="o">=</span> <span class="n">sz</span><span class="o">;</span>
+            <span class="no">DEX_FULL_NAME</span> <span class="o">=</span> <span class="n">dexFullName</span><span class="o">;</span>
+
+            <span class="n">filteredInfos</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
+            <span class="n">offsets</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"START... "</span> <span class="o">+</span> <span class="no">DEX_ID</span> <span class="o">+</span> <span class="s">"      "</span> <span class="o">+</span> <span class="no">DEX_FULL_NAME</span><span class="o">);</span>
+
+            <span class="n">init</span><span class="o">();</span>
+
+            <span class="nc">DexFile</span> <span class="n">dexFile</span> <span class="o">=</span> <span class="nc">DexBackedDexFile</span><span class="o">.</span><span class="na">fromInputStream</span><span class="o">(</span><span class="nc">Opcodes</span><span class="o">.</span><span class="na">getDefault</span><span class="o">(),</span> <span class="k">new</span> <span class="nc">ByteArrayInputStream</span><span class="o">(</span><span class="n">dexBytes</span><span class="o">));</span>
+
+
+            <span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">reflect</span><span class="o">.</span><span class="na">Method</span> <span class="n">getProtoIdItemOffsetMethod</span> <span class="o">=</span> <span class="nc">DexBackedMethod</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getDeclaredMethod</span><span class="o">(</span><span class="s">"getProtoIdItemOffset"</span><span class="o">);</span>
+            <span class="n">getProtoIdItemOffsetMethod</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+
+            <span class="kt">int</span> <span class="no">LIMIT</span> <span class="o">=</span> <span class="mi">10</span><span class="o">;</span>
+            <span class="kd">final</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">cntApp</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">};</span>
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">info</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+
+            <span class="nc">ClassDefRewriter</span> <span class="n">rewriter</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassDefRewriter</span><span class="o">(</span><span class="k">new</span> <span class="nc">DexRewriter</span><span class="o">(</span><span class="k">new</span> <span class="nc">RewriterModule</span><span class="o">()</span> <span class="o">{</span>
+
+                <span class="nd">@Nonnull</span>
+                <span class="nd">@Override</span>
+                <span class="kd">public</span> <span class="nc">Rewriter</span><span class="o">&lt;</span><span class="nc">MethodImplementation</span><span class="o">&gt;</span> <span class="nf">getMethodImplementationRewriter</span><span class="o">(</span><span class="nd">@Nonnull</span> <span class="nc">Rewriters</span> <span class="n">rewriters</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="k">return</span> <span class="k">new</span> <span class="nc">Rewriter</span><span class="o">&lt;</span><span class="nc">MethodImplementation</span><span class="o">&gt;()</span> <span class="o">{</span>
+                        <span class="nd">@Nonnull</span>
+                        <span class="nd">@Override</span>
+                        <span class="kd">public</span> <span class="nc">MethodImplementation</span> <span class="nf">rewrite</span><span class="o">(</span><span class="nd">@Nonnull</span> <span class="nc">MethodImplementation</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+                            <span class="nc">DexBackedMethodImplementation</span> <span class="n">ori</span> <span class="o">=</span> <span class="o">(</span><span class="nc">DexBackedMethodImplementation</span><span class="o">)</span> <span class="n">value</span><span class="o">;</span>
+
+                            <span class="nc">DexBackedMethod</span> <span class="n">oriMethod</span> <span class="o">=</span> <span class="n">ori</span><span class="o">.</span><span class="na">method</span><span class="o">;</span>
+
+                            <span class="nc">String</span> <span class="n">className</span> <span class="o">=</span> <span class="n">oriMethod</span><span class="o">.</span><span class="na">classDef</span><span class="o">.</span><span class="na">getType</span><span class="o">();</span>
+                            <span class="nc">String</span> <span class="n">methodName</span> <span class="o">=</span> <span class="n">oriMethod</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
+                            <span class="nc">String</span> <span class="n">methodSig</span> <span class="o">=</span> <span class="n">writeMethodDescriptor</span><span class="o">(</span><span class="n">oriMethod</span><span class="o">);</span>
+
+                            <span class="nc">String</span> <span class="n">fn</span> <span class="o">=</span> <span class="n">gettransName</span><span class="o">(</span><span class="n">className</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span> <span class="n">methodSig</span><span class="o">);</span>
+
+                            <span class="k">if</span> <span class="o">(</span><span class="n">offsets</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">fn</span><span class="o">))</span> <span class="o">{</span>
+                                <span class="kt">int</span> <span class="n">offset</span> <span class="o">=</span> <span class="n">offsets</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">fn</span><span class="o">);</span>
+                                <span class="n">cntApp</span><span class="o">[</span><span class="mi">0</span><span class="o">]++;</span>
+                                <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"HIT: fn: "</span> <span class="o">+</span> <span class="n">fn</span> <span class="o">+</span> <span class="s">" offset: "</span> <span class="o">+</span> <span class="n">offset</span><span class="o">);</span>
+
+                                <span class="nc">DexBackedDexFile</span> <span class="n">_dexFile</span> <span class="o">=</span> <span class="o">((</span><span class="nc">DexBackedMethodImplementation</span><span class="o">)</span> <span class="n">value</span><span class="o">).</span><span class="na">dexFile</span><span class="o">;</span>
+                                <span class="nc">MyMethodImpl</span> <span class="n">impl</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MyMethodImpl</span><span class="o">(((</span><span class="nc">DexBackedMethodImplementation</span><span class="o">)</span> <span class="n">value</span><span class="o">).</span><span class="na">dexFile</span><span class="o">,</span>
+                                        <span class="o">((</span><span class="nc">DexBackedMethodImplementation</span><span class="o">)</span> <span class="n">value</span><span class="o">).</span><span class="na">method</span><span class="o">,</span> <span class="n">offset</span><span class="o">);</span>
+
+                                <span class="k">return</span> <span class="n">impl</span><span class="o">;</span>
+                            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                                <span class="k">return</span> <span class="n">value</span><span class="o">;</span>
+                            <span class="o">}</span>
+
+                        <span class="o">}</span>
+                    <span class="o">};</span>
+                <span class="o">}</span>
+
+            <span class="o">}));</span>
+
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">ClassDef</span><span class="o">&gt;</span> <span class="n">newClassDefs</span> <span class="o">=</span> <span class="n">dexFile</span><span class="o">.</span><span class="na">getClasses</span><span class="o">().</span><span class="na">stream</span><span class="o">().</span><span class="na">map</span><span class="o">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                <span class="k">return</span> <span class="n">rewriter</span><span class="o">.</span><span class="na">rewrite</span><span class="o">(</span><span class="n">a</span><span class="o">);</span>
+            <span class="o">}).</span><span class="na">collect</span><span class="o">(</span><span class="nc">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+
+            <span class="nc">DexFile</span> <span class="n">newDexFile</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ImmutableDexFile</span><span class="o">(</span><span class="n">dexFile</span><span class="o">.</span><span class="na">getOpcodes</span><span class="o">(),</span> <span class="n">newClassDefs</span><span class="o">);</span>
+
+            <span class="nc">DexFileFactory</span><span class="o">.</span><span class="na">writeDexFile</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="no">DEX_OUT_PATH</span> <span class="o">+</span> <span class="s">"/%s.dex"</span><span class="o">,</span> <span class="no">DEX_ID</span><span class="o">),</span> <span class="n">newDexFile</span><span class="o">);</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"HIT NUM: "</span> <span class="o">+</span> <span class="n">cntApp</span><span class="o">[</span><span class="mi">0</span><span class="o">]);</span> <span class="c1">// 方法命中个数（包含失败的）</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"filtered num : "</span> <span class="o">+</span> <span class="n">filteredInfos</span><span class="o">.</span><span class="na">size</span><span class="o">());</span> <span class="c1">// 解析出错的，过滤掉的个数</span>
+        <span class="o">}</span>
+
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="nc">Set</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">filteredInfos</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashSet</span><span class="o">&lt;&gt;();</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">writeMethodDescriptor</span><span class="o">(</span><span class="nc">MethodReference</span> <span class="n">methodReference</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">StringBuilder</span> <span class="n">writer</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+        <span class="n">writer</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">'('</span><span class="o">);</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">CharSequence</span> <span class="n">paramType</span> <span class="o">:</span> <span class="n">methodReference</span><span class="o">.</span><span class="na">getParameterTypes</span><span class="o">())</span> <span class="o">{</span>
+            <span class="n">writer</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">paramType</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="n">writer</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">')'</span><span class="o">);</span>
+        <span class="n">writer</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">methodReference</span><span class="o">.</span><span class="na">getReturnType</span><span class="o">());</span>
+        <span class="k">return</span> <span class="n">writer</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">read</span><span class="o">(</span><span class="nc">String</span> <span class="n">fp</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+
+        <span class="nc">FileInputStream</span> <span class="n">is</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">FileInputStream</span><span class="o">(</span><span class="n">fp</span><span class="o">);</span>
+        <span class="kt">byte</span><span class="o">[]</span> <span class="n">b</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">is</span><span class="o">.</span><span class="na">available</span><span class="o">()];</span>
+        <span class="n">is</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">b</span><span class="o">);</span>
+        <span class="n">is</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+        <span class="k">return</span> <span class="n">b</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+</code></pre></div></div><p>拼装完后，所有的DexFile都被塞入了对应的code_item，反编译时，方法体从原先的没有内容到有东西了。。</p><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//pinzhuang_21.png" alt="Picture 1" /></li></ul><p>脱壳到此结束。</p><h1 id="后续">后续</h1><blockquote><p>lambda方法</p></blockquote><ul class="images_group"><li><img src="https://ykry35.github.io/blog.github.io/assets/images/posts/zhou_s_dex_unpacker//houxu_01.png" alt="Picture 1" /></li></ul><p>lambda方法看到的都是空的，这部分在Hotspot中是invokedynamic，那个都没仔细研究，放到这边就更不懂了。</p><blockquote><p>壳程序疑点</p></blockquote><p>从上面可以看出，笔者对壳程序具体的脱壳点还不是很了解，只是选择了时机较后的方法来dump内存。</p><p>还有一个更重要的问题！ 问什么ofstream写不了了。这个很重要！ 能否通过修改操作系统更下一层的Linux内核，来绕过这个问题呢(在内核处向上提供一个别的写文件方法)？</p><blockquote><p>脱壳应用之做外挂</p></blockquote><p>下一篇博客，将会举一个做外挂的例子，来说明脱了壳，我们能做些什么。</p><div style="margin-top:2em;padding:0 1.5em;border:1px solid #d3d3d3;background-color:#deebf7"><h3>文档信息</h3><ul><li>本文作者：<a href="https://ykry35.github.io/blog.github.io" target="_blank">Chaoxin Zhou</a></li><li>本文链接：<a href="https://ykry35.github.io/blog.github.io/2023/01/04/zhou_s_dex_unpacker/" target="_blank">https://ykry35.github.io/blog.github.io/2023/01/04/zhou_s_dex_unpacker/</a></li><li>版权声明：自由转载-非商用-非衍生-保持署名（<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/deed.zh" target="_blank">创意共享3.0许可证</a>）</li></ul></div></article><div class="share"></div><div class="comment"><div id="gitalk-container"></div><link rel="stylesheet" href="https://ykry35.github.io/blog.github.io/assets/vendor/gitalk/gitalk.css"> <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script> <script> var gitalk = new Gitalk({ id: '/2023/01/04/zhou_s_dex_unpacker/', clientID: 'a3a0fbaad3e91f2e2342', clientSecret: 'f82d523505992a3aab199b818ecff081b65f1a60', repo: 'blog.github.io', owner: 'ykry35', admin: ['ykry35'], labels: ['gitment'], perPage: 50, }); gitalk.render('gitalk-container'); </script></div></div><div class="column one-fourth"><h3>Search</h3><div id="site_search"> <input style="width:96%" type="text" id="search_box" placeholder="Search"></div><ul id="search_results" style="font-size:14px;list-style-type:none;padding-top:10px;padding-left:10px;"></ul><script src="https://ykry35.github.io/blog.github.io/assets/js/simple-jekyll-search.min.js"></script> <script type="text/javascript"> SimpleJekyllSearch({ searchInput: document.getElementById('search_box'), resultsContainer: document.getElementById('search_results'), json: 'https://ykry35.github.io/blog.github.io/assets/search_data.json?v=1673186855', searchResultTemplate: '<li><a href="{url}" title="{title}">{title}</a></li>', noResultsText: 'No results found', limit: 10, fuzzy: false, exclude: ['Welcome'] }) </script><h3 class="post-directory-title mobile-hidden">Table of Contents</h3><div id="post-directory-module" class="mobile-hidden"><section class="post-directory"><dl></dl></section></div><script src="https://ykry35.github.io/blog.github.io/assets/js/jquery.toc.js"></script></div></div><script type="text/javascript"> $(document).ready(function(){ const jekyllConfigId = '#jekyllconfig'; const imageGroupClass = '.images_group'; $(jekyllConfigId).hide(); var configStr = $(jekyllConfigId).text().trim(); const jekyllConfig = JSON.parse(configStr); console.log("jekyllConfig", jekyllConfig); $(imageGroupClass + ' li').css('width', jekyllConfig['viewerjs']['img_width']); $(imageGroupClass).each(function(index, element) { new Viewer(element); }); }); </script></section><footer class="container"><div class="site-footer" role="contentinfo"><div class="copyright left mobile-block"> © 2021 <span title="Chaoxin Zhou">Chaoxin Zhou</span> <a href="javascript:window.scrollTo(0,0)" class="right mobile-visible">TOP</a></div><ul class="site-footer-links right mobile-hidden"><li> <a href="javascript:window.scrollTo(0,0)" >TOP</a></li></ul><a href="https://github.com/YKRY35/" target="_blank" aria-label="view source code"> <span class="mega-octicon octicon-mark-github" title="GitHub"></span> </a><ul class="site-footer-links mobile-hidden"><li> <a href="https://ykry35.github.io/blog.github.io/" title="首页" target="">首页</a></li><li> <a href="https://ykry35.github.io/blog.github.io/categories/" title="分类" target="">分类</a></li><li> <a href="https://ykry35.github.io/blog.github.io/wiki/" title="维基" target="">维基</a></li><li> <a href="https://ykry35.github.io/blog.github.io/links/" title="链接" target="">链接</a></li><li> <a href="https://ykry35.github.io/blog.github.io/about/" title="关于" target="">关于</a></li><li><a href="https://ykry35.github.io/blog.github.io/feed.xml"><span class="octicon octicon-rss" style="color:orange;"></span></a></li></ul></div></footer><div class="tools-wrapper"> <a class="gotop" href="#" title="回到顶部"><span class="octicon octicon-arrow-up"></span></a></div><script src="https://ykry35.github.io/blog.github.io/assets/js/geopattern.js"></script> <script> jQuery(document).ready(function($) { $('.geopattern').each(function(){ $(this).geopattern($(this).data('pattern-id')); }); /* hljs.initHighlightingOnLoad(); */ }); </script></body></html>
